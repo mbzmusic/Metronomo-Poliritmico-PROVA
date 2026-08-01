@@ -1,6 +1,7 @@
 let audioCtx = null;
 let masterGainNode = null;
 let isPlaying = false;
+// BPM PREDEFINITO FISSO A 120
 let bpm = 120;
 let masterVolume = 1.0;
 let inCountdown = false;
@@ -71,8 +72,16 @@ const silentConfigRow = document.getElementById('silentConfigRow');
 const silentAudibleBars = document.getElementById('silentAudibleBars');
 const silentMuteBars = document.getElementById('silentMuteBars');
 const visualizerEl = document.querySelector('.visualizer');
+const statsBtn = document.getElementById('statsBtn');
+const statsModal = document.getElementById('statsModal');
+const statsGrid = document.getElementById('statsGrid');
+const statsCloseBtn = document.getElementById('statsCloseBtn');
+const statsResetBtn = document.getElementById('statsResetBtn');
 
 let presets = [];
+let practiceStats = { totalMinutes: 0, sessions: 0, maxBpm: 0, lastSession: null };
+let sessionStartTime = null;
+let sessionMaxBpm = 0;
 
 function loadPersistedData() {
     try {
@@ -175,7 +184,7 @@ function applySequenceData(data) {
     if (typeof data.bpm === 'number') setValidBpm(data.bpm);
     if (typeof data.countdown === 'boolean') countdownToggle.checked = data.countdown;
     if (typeof data.swing === 'number') {
-        swingAmount.value = Math.min(100, Math.max(0, data.swing));
+        swingAmount.value = Math.min(75, Math.max(0, data.swing));
         swingValueText.innerText = `${swingAmount.value}%`;
     }
     if (typeof data.soundWave === 'string') {
@@ -318,6 +327,62 @@ sharedImportCancel.addEventListener('click', () => {
     history.replaceState(null, '', location.pathname + location.search);
 });
 
+function loadStats() {
+    try {
+        const raw = localStorage.getItem('metronome_stats_v1');
+        if (raw) practiceStats = { ...practiceStats, ...JSON.parse(raw) };
+    } catch (e) {
+        console.error('Errore nel caricamento delle statistiche', e);
+    }
+}
+
+function saveStats() {
+    try {
+        localStorage.setItem('metronome_stats_v1', JSON.stringify(practiceStats));
+    } catch (e) {
+        console.error('Errore nel salvataggio delle statistiche', e);
+    }
+}
+
+function renderStats() {
+    const lastSessionText = practiceStats.lastSession 
+        ? new Date(practiceStats.lastSession).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+        : '—';
+        
+    statsGrid.innerHTML = `
+        <div class="stat-box">
+            <div class="stat-value">${Math.round(practiceStats.totalMinutes)}</div>
+            <div class="stat-label">Minuti Totali</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">${practiceStats.sessions}</div>
+            <div class="stat-label">Sessioni</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value">${practiceStats.maxBpm || '—'}</div>
+            <div class="stat-label">BPM Massimo</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-value" style="font-size: 0.95rem;">${lastSessionText}</div>
+            <div class="stat-label">Ultima Sessione</div>
+        </div>
+    `;
+}
+
+statsBtn.addEventListener('click', () => {
+    renderStats();
+    statsModal.classList.add('active');
+});
+
+statsCloseBtn.addEventListener('click', () => statsModal.classList.remove('active'));
+
+// AZZERAMENTO DIRETTO SENZA POPUP DI CONFERMA
+statsResetBtn.addEventListener('click', () => {
+    practiceStats = { totalMinutes: 0, sessions: 0, maxBpm: 0, lastSession: null };
+    saveStats();
+    renderStats();
+});
+
 swingAmount.addEventListener('input', () => {
     swingValueText.innerText = `${swingAmount.value}%`;
 });
@@ -339,29 +404,45 @@ function getAgogica(val) {
     return "Prestissimo";
 }
 
+// --- CORREZIONE LOGICA MASTER KNOB ---
 function updateMasterKnobUI(vol) {
+    // Clamp volume between 0 and 1
     masterVolume = Math.min(1, Math.max(0, vol));
     
+    // 1. Update Text
     const percentage = Math.round(masterVolume * 100);
     masterValueText.innerText = `${percentage}%`;
     masterKnob.setAttribute('aria-valuenow', percentage);
 
+    // 2. Update Knob Indicator Rotation
+    // Range is -135deg to +135deg (Total 270 degrees)
     const angle = -135 + (masterVolume * 270);
     knobIndicator.style.transform = `rotate(${angle}deg)`;
 
-    const totalCircumference = 144.513; 
-    const maxDashOffset = 108.385; 
+    // 3. Update SVG Ring
+    // From CSS: stroke-dasharray of bg-circle is "108.385, 144.513". 
+    // This means the visible arc length is approx 108.4 units.
+    // The gap is 144.5 units.
+    // Total circumference handled by dasharray logic = 108.385 + 144.513 = 252.898
+    
+    const totalCircumference = 252.9; 
+    const arcLength = 108.4; // The visual length of the yellow/grey arc
     
     if (masterVolume <= 0.005) {
+        // Hide completely at 0%
         valCircle.style.strokeDasharray = `0, ${totalCircumference}`;
         valCircle.style.opacity = '0';
     } else {
-        const currentFill = masterVolume * maxDashOffset;
+        // Calculate current fill length
+        const currentFill = masterVolume * arcLength;
+        // The second number ensures the rest of the circle is empty
         valCircle.style.strokeDasharray = `${currentFill}, ${totalCircumference}`;
         valCircle.style.opacity = '1';
     }
 
+    // Update Audio Gain
     if (masterGainNode) masterGainNode.gain.value = masterVolume;
+    
     savePersistedData();
 }
 
@@ -452,6 +533,8 @@ function setValidBpm(val) {
     
     clearTimeout(bpmSaveTimeout);
     bpmSaveTimeout = setTimeout(savePersistedData, 300);
+    
+    if (isPlaying) sessionMaxBpm = Math.max(sessionMaxBpm, bpm);
 }
 
 bpmSlider.addEventListener('input', (e) => setValidBpm(e.target.value));
@@ -781,8 +864,6 @@ resetSequenceBtn.addEventListener('click', () => {
     currentMeasureIndex = 0;
     measureRepeatCounter = 0;
     setValidBpm(120);
-    swingAmount.value = 0;
-    swingValueText.innerText = '0%';
     renderMeasuresList();
     renderDots(0, -1, -1);
     savePersistedData();
@@ -1001,7 +1082,7 @@ function nextNote() {
         let subDuration = baseSubDuration;
         
         if (swingPct > 0 && totalSubsInBeat >= 2) {
-            const swingRatio = Math.min(100, swingPct) / 100 * 0.75;
+            const swingRatio = Math.min(75, swingPct) / 100;
             subDuration = (currentSubBeatInBeat % 2 === 0) 
                 ? baseSubDuration * (1 + swingRatio) 
                 : baseSubDuration * (1 - swingRatio);
@@ -1216,6 +1297,9 @@ function togglePlayback() {
         
         scheduler();
         uiTimerID = setInterval(updateUI, 25);
+        
+        sessionStartTime = Date.now();
+        sessionMaxBpm = bpm;
     } else {
         clearTimeout(timerID);
         clearInterval(uiTimerID);
@@ -1228,6 +1312,18 @@ function togglePlayback() {
         if (visualizerEl) visualizerEl.classList.remove('silent-phase');
         
         releaseWakeLock();
+        
+        if (sessionStartTime) {
+            const elapsedMinutes = (Date.now() - sessionStartTime) / 60000;
+            if (elapsedMinutes > 0.05) {
+                practiceStats.totalMinutes += elapsedMinutes;
+                practiceStats.sessions += 1;
+                practiceStats.maxBpm = Math.max(practiceStats.maxBpm, sessionMaxBpm);
+                practiceStats.lastSession = Date.now();
+                saveStats();
+            }
+            sessionStartTime = null;
+        }
     }
 }
 
@@ -1249,4 +1345,5 @@ swingValueText.innerText = `${swingAmount.value}%`;
 silentConfigRow.style.opacity = silentModeToggle.checked ? "1" : "0.5";
 loadPresets();
 renderPresetsList();
+loadStats();
 checkSharedLinkOnLoad();
