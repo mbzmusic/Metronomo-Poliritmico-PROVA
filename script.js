@@ -1,8 +1,9 @@
 let audioCtx = null;
 let masterGainNode = null;
 let isPlaying = false;
+// BPM PREDEFINITO FISSO A 120
 let bpm = 120;
-let masterVolume = 0.5;
+let masterVolume = 1.0;
 let inCountdown = false;
 let countdownBeat = 0;
 const COUNTDOWN_TOTAL = 4;
@@ -19,7 +20,6 @@ let timerID = null;
 let uiTimerID = null;
 let uiNotes = [];
 let activeSubPopup = null;
-let activeSubdivisionPopup = null;
 let measures = [
 { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, accents: [], isCustom: false },
 { beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false }
@@ -80,9 +80,6 @@ let presets = [];
 let practiceStats = { totalMinutes: 0, sessions: 0, maxBpm: 0, lastSession: null };
 let sessionStartTime = null;
 let sessionMaxBpm = 0;
-const SUBDIVISION_NAMES = ['','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settimine'];
-const KNOB_CIRCUMFERENCE = 2 * Math.PI * 23;
-const KNOB_MAX_ARC = KNOB_CIRCUMFERENCE * (270 / 360);
 function loadPersistedData() {
 try {
 const savedMeasures = localStorage.getItem('metronome_measures_v5');
@@ -305,6 +302,7 @@ renderStats();
 statsModal.classList.add('active');
 });
 statsCloseBtn.addEventListener('click', () => statsModal.classList.remove('active'));
+// AZZERAMENTO DIRETTO SENZA POPUP DI CONFERMA
 statsResetBtn.addEventListener('click', () => {
 practiceStats = { totalMinutes: 0, sessions: 0, maxBpm: 0, lastSession: null };
 saveStats();
@@ -318,27 +316,27 @@ silentModeToggle.addEventListener('change', () => {
 silentConfigRow.style.opacity = silentModeToggle.checked ? "1" : "0.5";
 });
 function getAgogica(val) {
-if (val  < 40) return  "Grave";
-if (val  < 60) return  "Largo";
-if (val  < 66) return  "Larghetto";
-if (val  < 76) return  "Adagio";
-if (val  < 108) return  "Andante";
-if (val  < 120) return  "Moderato";
-if (val  < 168) return  "Allegro";
-if (val  < 200) return  "Presto";
-return  "Prestissimo";
+if (val  < 40) return  "Grave ";
+if (val  < 60) return  "Largo ";
+if (val  < 66) return  "Larghetto ";
+if (val  < 76) return  "Adagio ";
+if (val  < 108) return  "Andante ";
+if (val  < 120) return  "Moderato ";
+if (val  < 168) return  "Allegro ";
+if (val  < 200) return  "Presto ";
+return  "Prestissimo ";
 }
 function updateMasterKnobUI(vol) {
 masterVolume = Math.min(1, Math.max(0, vol));
 const angle = -135 + (masterVolume * 270);
 knobIndicator.style.transform = `rotate(${angle}deg)`;
 masterValueText.innerText = `${Math.round(masterVolume * 100)}%`;
-const currentArc = masterVolume * KNOB_MAX_ARC;
+const maxArcLength = 63.61;
 if (masterVolume <= 0.005) {
-valCircle.style.strokeDasharray = `0, ${KNOB_CIRCUMFERENCE}`;
+valCircle.style.strokeDasharray = `0, 84.82`;
 valCircle.style.opacity = '0';
 } else {
-valCircle.style.strokeDasharray = `${currentArc}, ${KNOB_CIRCUMFERENCE}`;
+valCircle.style.strokeDasharray = `${masterVolume * maxArcLength}, 84.82`;
 valCircle.style.opacity = '1';
 }
 masterKnob.setAttribute('aria-valuenow', Math.round(masterVolume * 100));
@@ -347,28 +345,15 @@ savePersistedData();
 }
 let isDraggingKnob = false, startY = 0, startVol = 0.5;
 masterKnob.addEventListener('mousedown', (e) => {
-e.preventDefault();
-isDraggingKnob = true;
-startY = e.clientY;
-startVol = masterVolume;
-document.body.classList.add('is-dragging-knob');
+isDraggingKnob = true; startY = e.clientY; startVol = masterVolume;
 });
 window.addEventListener('mousemove', (e) => {
 if (!isDraggingKnob) return;
-e.preventDefault();
 updateMasterKnobUI(startVol + ((startY - e.clientY) / 150));
 });
-window.addEventListener('mouseup', () => {
-if (isDraggingKnob) {
-isDraggingKnob = false;
-document.body.classList.remove('is-dragging-knob');
-}
-});
+window.addEventListener('mouseup', () => isDraggingKnob = false);
 masterKnob.addEventListener('touchstart', (e) => {
-isDraggingKnob = true;
-startY = e.touches[0].clientY;
-startVol = masterVolume;
-document.body.classList.add('is-dragging-knob');
+isDraggingKnob = true; startY = e.touches[0].clientY; startVol = masterVolume;
 e.preventDefault();
 }, { passive: false });
 window.addEventListener('touchmove', (e) => {
@@ -376,19 +361,12 @@ if (!isDraggingKnob) return;
 updateMasterKnobUI(startVol + ((startY - e.touches[0].clientY) / 150));
 e.preventDefault();
 }, { passive: false });
-window.addEventListener('touchend', () => {
-if (isDraggingKnob) {
-isDraggingKnob = false;
-document.body.classList.remove('is-dragging-knob');
-}
-});
+window.addEventListener('touchend', () => isDraggingKnob = false);
 masterKnob.addEventListener('keydown', (e) => {
 if (e.code === 'ArrowUp' || e.code === 'ArrowRight') {
-e.preventDefault();
-updateMasterKnobUI(masterVolume + 0.05);
+e.preventDefault(); updateMasterKnobUI(masterVolume + 0.05);
 } else if (e.code === 'ArrowDown' || e.code === 'ArrowLeft') {
-e.preventDefault();
-updateMasterKnobUI(masterVolume - 0.05);
+e.preventDefault(); updateMasterKnobUI(masterVolume - 0.05);
 }
 });
 function setupDragToAdjust(inputElem, onUpdate) {
@@ -494,35 +472,6 @@ measureRepeatCounter = 0;
 renderMeasuresList();
 renderDots(currentMeasureIndex, -1, -1);
 }
-function closeSubdivisionPopup() {
-if (activeSubdivisionPopup) {
-activeSubdivisionPopup.remove();
-activeSubdivisionPopup = null;
-}
-}
-function showSubdivisionPopup(selectorElem, measureIndex) {
-closeSubdivisionPopup();
-const m = measures[measureIndex];
-const currentSub = m.sub;
-const popup = document.createElement('div');
-popup.className = 'subdivision-popup';
-for (let i = 1; i <= 7; i++) {
-const opt = document.createElement('div');
-opt.className = 'sub-popup-option' + (i === currentSub ? ' selected' : '');
-opt.textContent = SUBDIVISION_NAMES[i];
-opt.addEventListener('click', (e) => {
-e.stopPropagation();
-updateMeasure(measureIndex, 'sub', i);
-closeSubdivisionPopup();
-});
-popup.appendChild(opt);
-}
-selectorElem.appendChild(popup);
-activeSubdivisionPopup = popup;
-requestAnimationFrame(() => {
-popup.classList.add('active');
-});
-}
 function renderMeasuresList() {
 measuresContainer.innerHTML = '';
 measures.forEach((m, index) => {
@@ -530,72 +479,65 @@ const isFirst = index === 0;
 const isLast = index === measures.length - 1;
 const isOnly = measures.length === 1;
 const row = document.createElement('div');
-row.className = `measure-row ${index === currentMeasureIndex ? 'current' : ''}`;
-row.onclick = (e) => {
-if (['SELECT', 'BUTTON', 'svg', 'path', 'line', 'rect'].includes(e.target.tagName)) return;
-if (e.target.closest('.subdivision-selector')) return;
-if (isPlaying) return;
-selectMeasure(index);
-};
-const repeatOptions = [1,2,3,4,5,6,7,8,9,10].map(r => `<option value="${r}" ${m.repeat === r ? 'selected' : ''}>×${r}</option>`).join('') + `<option value="inf" ${m.repeat === 'inf' ? 'selected' : ''}>Loop</option>`;
-const customLabel = m.isCustom ? `${m.beats}/${m.sub}` : 'Custom...';
-const currentSubName = SUBDIVISION_NAMES[m.sub] || 'Crome';
-row.innerHTML = `
-  <div class="measure-left">
-    <div class="measure-number">${index + 1}</div>
-    <select class="measure-select preset" onchange="handlePresetSelect(${index}, this.value)" onclick="handlePresetClick(${index}, this)" aria-label="Metro">
-      <option value="4/4" ${!m.isCustom && m.beats === 4 && m.sub !== 3 ? 'selected' : ''}>4/4</option>
-      <option value="2/4" ${!m.isCustom && m.beats === 2 && m.sub !== 3 ? 'selected' : ''}>2/4</option>
-      <option value="3/4" ${!m.isCustom && m.beats === 3 && m.sub !== 3 ? 'selected' : ''}>3/4</option>
-      <option value="6/8" ${!m.isCustom && m.beats === 2 && m.sub === 3 ? 'selected' : ''}>6/8</option>
-      <option value="7/8" ${!m.isCustom && m.beats === 7 && m.sub === 2 ? 'selected' : ''}>7/8</option>
-      <option value="12/8" ${!m.isCustom && m.beats === 4 && m.sub === 3 ? 'selected' : ''}>12/8</option>
-      <option value="custom" ${m.isCustom ? 'selected' : ''}>${customLabel}</option>
-    </select>
-    ${m.isCustom ? `
-      <button type="button" class="icon-btn edit-btn" onclick="openCustomModal(${index})" title="Modifica Metro Custom">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-      </button>
-    ` : ''}
-    <div class="subdivision-selector" data-measure-index="${index}">
-      <div class="subdivision-current">${currentSubName}</div>
-    </div>
-    <select class="measure-select repeat" onchange="updateMeasure(${index}, 'repeat', this.value)" aria-label="Ripetizioni">
-      ${repeatOptions}
-    </select>
-  </div>
-  <div class="measure-right">
-    <button type="button" class="icon-btn ${isFirst ? 'disabled' : ''}" 
-      ${isFirst ? 'disabled' : ''} onclick="moveMeasureOrder(${index}, -1)">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-    </button>
-    <button type="button" class="icon-btn ${isLast ? 'disabled' : ''}" 
-      ${isLast ? 'disabled' : ''} onclick="moveMeasureOrder(${index}, 1)">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
-    </button>
-    <button type="button" class="icon-btn" onclick="resetSingleMeasureAccents(${index})" title="Reset Accenti">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-    </button>
-    <button type="button" class="icon-btn active-action" onclick="duplicateMeasure(${index})" title="Duplica">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-    </button>
-    <button type="button" class="icon-btn ${isOnly ? 'disabled' : ''}" 
-      ${isOnly ? 'disabled' : ''} onclick="removeMeasure(${index}, event)" title="Elimina">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-    </button>
-  </div>
-`;
-const subSelector = row.querySelector('.subdivision-selector');
-const subCurrent = subSelector.querySelector('.subdivision-current');
-subCurrent.addEventListener('click', (e) => {
-  e.stopPropagation();
-  if (activeSubdivisionPopup && activeSubdivisionPopup.parentElement === subSelector) {
-    closeSubdivisionPopup();
-  } else {
-    showSubdivisionPopup(subSelector, index);
-  }
-});
-measuresContainer.appendChild(row);
+ row.className = `measure-row ${index === currentMeasureIndex ? 'current' : ''}`;
+ row.onclick = (e) => {
+   if (['SELECT', 'BUTTON', 'svg', 'path', 'line', 'rect'].includes(e.target.tagName)) return;
+   if (isPlaying) return;
+   selectMeasure(index);
+ };
+ const repeatOptions = [1,2,3,4,5,6,7,8,9,10].map(r => `<option value="${r}" ${m.repeat === r ? 'selected' : ''}>×${r}</option>`).join('') + `<option value="inf" ${m.repeat === 'inf' ? 'selected' : ''}>Loop</option>`;
+ const customLabel = m.isCustom ? `${m.beats}/${m.sub}` : 'Custom...';
+ row.innerHTML = `
+   <div class="measure-left">
+     <div class="measure-number">${index + 1}</div>
+     <select class="measure-select preset" onchange="handlePresetSelect(${index}, this.value)" onclick="handlePresetClick(${index}, this)" aria-label="Metro">
+       <option value="4/4" ${!m.isCustom && m.beats === 4 && m.sub !== 3 ? 'selected' : ''}>4/4</option>
+       <option value="2/4" ${!m.isCustom && m.beats === 2 && m.sub !== 3 ? 'selected' : ''}>2/4</option>
+       <option value="3/4" ${!m.isCustom && m.beats === 3 && m.sub !== 3 ? 'selected' : ''}>3/4</option>
+       <option value="6/8" ${!m.isCustom && m.beats === 2 && m.sub === 3 ? 'selected' : ''}>6/8</option>
+       <option value="7/8" ${!m.isCustom && m.beats === 7 && m.sub === 2 ? 'selected' : ''}>7/8</option>
+       <option value="12/8" ${!m.isCustom && m.beats === 4 && m.sub === 3 ? 'selected' : ''}>12/8</option>
+       <option value="custom" ${m.isCustom ? 'selected' : ''}>${customLabel}</option>
+     </select>
+     ${m.isCustom ? `
+       <button type="button" class="icon-btn edit-btn" onclick="openCustomModal(${index})" title="Modifica Metro Custom">
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+       </button>
+     ` : ''}
+     <select class="measure-select subdivision" onchange="updateMeasure(${index}, 'sub', this.value)" aria-label="Suddivisione">
+       <option value="1" ${m.sub === 1 ? 'selected' : ''}>Quarti</option>
+       <option value="2" ${m.sub === 2 ? 'selected' : ''}>Crome</option>
+       <option value="3" ${m.sub === 3 ? 'selected' : ''}>Terzine</option>
+       <option value="4" ${m.sub === 4 ? 'selected' : ''}>Quartine</option>
+       <option value="5" ${m.sub === 5 ? 'selected' : ''}>Quintine</option>
+       <option value="6" ${m.sub === 6 ? 'selected' : ''}>Sestine</option>
+     </select>
+     <select class="measure-select repeat" onchange="updateMeasure(${index}, 'repeat', this.value)" aria-label="Ripetizioni">
+       ${repeatOptions}
+     </select>
+   </div>
+   <div class="measure-right">
+     <button type="button" class="icon-btn ${isFirst ? 'disabled' : ''}" 
+       ${isFirst ? 'disabled' : ''} onclick="moveMeasureOrder(${index}, -1)">
+       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+     </button>
+     <button type="button" class="icon-btn ${isLast ? 'disabled' : ''}" 
+       ${isLast ? 'disabled' : ''} onclick="moveMeasureOrder(${index}, 1)">
+       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+     </button>
+     <button type="button" class="icon-btn" onclick="resetSingleMeasureAccents(${index})" title="Reset Accenti">
+       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+     </button>
+     <button type="button" class="icon-btn active-action" onclick="duplicateMeasure(${index})" title="Duplica">
+       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+     </button>
+     <button type="button" class="icon-btn ${isOnly ? 'disabled' : ''}" 
+       ${isOnly ? 'disabled' : ''} onclick="removeMeasure(${index}, event)" title="Elimina">
+       <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+     </button>
+   </div>
+ `;
+ measuresContainer.appendChild(row);
 });
 savePersistedData();
 }
@@ -767,8 +709,6 @@ measures = [
 currentMeasureIndex = 0;
 measureRepeatCounter = 0;
 setValidBpm(120);
-swingAmount.value = 0;
-swingValueText.innerText = '0%';
 renderMeasuresList();
 renderDots(0, -1, -1);
 savePersistedData();
@@ -785,7 +725,7 @@ const popup = document.createElement('div');
 popup.className = 'beat-sub-popup';
 const m = measures[measureIndex];
 const currentSub = m.beatSubs[beatIndex];
-const subNames = SUBDIVISION_NAMES;
+const subNames = ['','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settime'];
 for (let i = 1; i <= 7; i++) {
 const opt = document.createElement('div');
 opt.className = 'sub-popup-option' + (i === currentSub ? ' selected' : '');
@@ -887,43 +827,43 @@ for (let b = 0; b < config.beats; b++) {
 const group = document.createElement('div');
 group.className = 'beat-group';
 const beatNumber = document.createElement('div');
-beatNumber.className = 'beat-number';
-beatNumber.textContent = b + 1;
-if (b === activeBeat) beatNumber.classList.add('active-beat');
-setupBeatLongPress(beatNumber, measureIndex, b);
-group.appendChild(beatNumber);
-const dotsRow = document.createElement('div');
-dotsRow.className = 'beat-dots-row';
-for (let s = 0; s < config.beatSubs[b]; s++) {
-  const dotIdx = globalSubBeatIndex;
-  const dot = document.createElement('div');
-  dot.className = 'dot';
-  if (s === 0) dot.classList.add('downbeat');
-  const state = config.accents[dotIdx] || 0;
-  if (state === 1) dot.classList.add('state-accent');
-  if (state === 2) dot.classList.add('state-mute');
-  dot.setAttribute('role', 'button');
-  dot.setAttribute('tabindex', '0');
-  const stateLabel = state === 1 ? 'accento' : state === 2 ? 'muto' : 'normale';
-  dot.setAttribute('aria-label', `Suddivisione ${dotIdx + 1}, stato ${stateLabel}`);
-  const cycleState = () => {
-    config.accents[dotIdx] = (state + 1) % 3;
-    renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode, currentRepeat);
-    savePersistedData();
-  };
-  dot.addEventListener('click', cycleState);
-  dot.addEventListener('keydown', (e) => {
-    if (e.code === 'Enter' || e.code === 'Space') {
-      e.preventDefault();
-      cycleState();
-    }
-  });
-  if (b === activeBeat && s === activeSubBeatInBeat) dot.classList.add('active');
-  dotsRow.appendChild(dot);
-  globalSubBeatIndex++;
-}
-group.appendChild(dotsRow);
-dotsContainer.appendChild(group);
+ beatNumber.className = 'beat-number';
+ beatNumber.textContent = b + 1;
+ if (b === activeBeat) beatNumber.classList.add('active-beat');
+ setupBeatLongPress(beatNumber, measureIndex, b);
+ group.appendChild(beatNumber);
+ const dotsRow = document.createElement('div');
+ dotsRow.className = 'beat-dots-row';
+ for (let s = 0; s < config.beatSubs[b]; s++) {
+   const dotIdx = globalSubBeatIndex;
+   const dot = document.createElement('div');
+   dot.className = 'dot';
+   if (s === 0) dot.classList.add('downbeat');
+   const state = config.accents[dotIdx] || 0;
+   if (state === 1) dot.classList.add('state-accent');
+   if (state === 2) dot.classList.add('state-mute');
+   dot.setAttribute('role', 'button');
+   dot.setAttribute('tabindex', '0');
+   const stateLabel = state === 1 ? 'accento' : state === 2 ? 'muto' : 'normale';
+   dot.setAttribute('aria-label', `Suddivisione ${dotIdx + 1}, stato ${stateLabel}`);
+   const cycleState = () => {
+     config.accents[dotIdx] = (state + 1) % 3;
+     renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode, currentRepeat);
+     savePersistedData();
+   };
+   dot.addEventListener('click', cycleState);
+   dot.addEventListener('keydown', (e) => {
+     if (e.code === 'Enter' || e.code === 'Space') {
+       e.preventDefault();
+       cycleState();
+     }
+   });
+   if (b === activeBeat && s === activeSubBeatInBeat) dot.classList.add('active');
+   dotsRow.appendChild(dot);
+   globalSubBeatIndex++;
+ }
+ group.appendChild(dotsRow);
+ dotsContainer.appendChild(group);
 }
 document.querySelectorAll('.measure-row').forEach((row, idx) => {
 row.classList.toggle('current', idx === measureIndex);
@@ -948,40 +888,40 @@ const safeBeatSubs = config.beatSubs || new Array(config.beats || 4).fill(config
 const totalSubsInBeat = safeBeatSubs[currentBeat] || config.sub || 2;
 const baseSubDuration = secondsPerQuarter / totalSubsInBeat;
 const swingPct = parseInt(swingAmount.value, 10) || 0;
-let subDuration = baseSubDuration;
-if (swingPct > 0 && totalSubsInBeat >= 2) {
-  const swingRatio = Math.min(75, swingPct) / 100;
-  subDuration = (currentSubBeatInBeat % 2 === 0)
-    ? baseSubDuration * (1 + swingRatio)
-    : baseSubDuration * (1 - swingRatio);
-}
-nextNoteTime += subDuration;
-currentSubBeatInBeat++;
-if (currentSubBeatInBeat >= totalSubsInBeat) {
-  currentSubBeatInBeat = 0;
-  currentBeat++;
-  if (currentBeat >= config.beats) {
-    currentBeat = 0;
-    measureRepeatCounter++;
-    totalCompletedMeasures++;
-    if (trainerToggle.checked) {
-      const barsTarget = parseInt(trainerBarsInc.value, 10) || 4;
-      if (totalCompletedMeasures % barsTarget === 0) {
-        const bpmInc = parseInt(trainerBpmInc.value, 10) || 2;
-        setValidBpm(bpm + bpmInc);
-      }
-    }
-    const maxRepeats = config.repeat || 1;
-    const isInfinite = maxRepeats === 'inf';
-    if (!isInfinite) {
-      const limit = typeof maxRepeats === 'number' ? maxRepeats : parseInt(maxRepeats, 10) || 1;
-      if (measureRepeatCounter >= limit) {
-        measureRepeatCounter = 0;
-        currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
-      }
-    }
-  }
-}
+ let subDuration = baseSubDuration;
+ if (swingPct > 0 && totalSubsInBeat >= 2) {
+   const swingRatio = Math.min(75, swingPct) / 100;
+   subDuration = (currentSubBeatInBeat % 2 === 0)
+     ? baseSubDuration * (1 + swingRatio)
+     : baseSubDuration * (1 - swingRatio);
+ }
+ nextNoteTime += subDuration;
+ currentSubBeatInBeat++;
+ if (currentSubBeatInBeat >= totalSubsInBeat) {
+   currentSubBeatInBeat = 0;
+   currentBeat++;
+   if (currentBeat >= config.beats) {
+     currentBeat = 0;
+     measureRepeatCounter++;
+     totalCompletedMeasures++; 
+     if (trainerToggle.checked) {
+       const barsTarget = parseInt(trainerBarsInc.value, 10) || 4;
+       if (totalCompletedMeasures % barsTarget === 0) {
+         const bpmInc = parseInt(trainerBpmInc.value, 10) || 2;
+         setValidBpm(bpm + bpmInc);
+       }
+     }
+     const maxRepeats = config.repeat || 1;
+     const isInfinite = maxRepeats === 'inf';
+     if (!isInfinite) {
+       const limit = typeof maxRepeats === 'number' ? maxRepeats : parseInt(maxRepeats, 10) || 1;
+       if (measureRepeatCounter >= limit) {
+         measureRepeatCounter = 0;
+         currentMeasureIndex = (currentMeasureIndex + 1) % measures.length;
+       }
+     }
+   }
+ }
 }
 }
 function scheduleNote(time) {
@@ -1017,49 +957,49 @@ const osc = audioCtx.createOscillator();
 const gainNode = audioCtx.createGain();
 gainNode.connect(masterGainNode);
 const vol = parseFloat(metroVolInput.value);
-let subVol = isAccented ? 0.95 : (isMainBeat ? 0.75 : 0.45);
-if (isCountdownStep) subVol = 0.8;
-if (isCountdownStep) {
-  const isLastCount = capturedCountdownBeat === COUNTDOWN_TOTAL - 1;
-  osc.type = 'triangle';
-  osc.frequency.setValueAtTime(isLastCount ? 1200 : 900, time);
-  gainNode.gain.setValueAtTime(subVol * vol, time);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
-  osc.connect(gainNode);
-  osc.start(time);
-  osc.stop(time + 0.05);
-} else if (soundType === 'woodblock') {
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 800 : 600, time);
-  gainNode.gain.setValueAtTime(subVol * vol, time);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.03);
-  osc.connect(gainNode);
-  osc.start(time);
-  osc.stop(time + 0.03);
-} else if (soundType === 'cowbell') {
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 550 : 420, time);
-  gainNode.gain.setValueAtTime(subVol * 0.4 * vol, time);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
-  osc.connect(gainNode);
-  osc.start(time);
-  osc.stop(time + 0.05);
-} else if (soundType === 'rimshot') {
-  const noise = audioCtx.createBufferSource();
-  noise.buffer = noiseBuffer;
-  gainNode.gain.setValueAtTime(subVol * 0.6 * vol, time);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
-  noise.connect(gainNode);
-  noise.start(time);
-} else {
-  osc.type = soundType;
-  osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 700 : 500, time);
-  gainNode.gain.setValueAtTime(subVol * 0.4 * vol, time);
-  gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.035);
-  osc.connect(gainNode);
-  osc.start(time);
-  osc.stop(time + 0.035);
-}
+ let subVol = isAccented ? 0.95 : (isMainBeat ? 0.75 : 0.45);
+ if (isCountdownStep) subVol = 0.8;
+ if (isCountdownStep) {
+   const isLastCount = capturedCountdownBeat === COUNTDOWN_TOTAL - 1;
+   osc.type = 'triangle';
+   osc.frequency.setValueAtTime(isLastCount ? 1200 : 900, time);
+   gainNode.gain.setValueAtTime(subVol * vol, time);
+   gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+   osc.connect(gainNode);
+   osc.start(time);
+   osc.stop(time + 0.05);
+ } else if (soundType === 'woodblock') {
+   osc.type = 'sine';
+   osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 800 : 600, time);
+   gainNode.gain.setValueAtTime(subVol * vol, time);
+   gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.03);
+   osc.connect(gainNode);
+   osc.start(time);
+   osc.stop(time + 0.03);
+ } else if (soundType === 'cowbell') {
+   osc.type = 'square';
+   osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 550 : 420, time);
+   gainNode.gain.setValueAtTime(subVol * 0.4 * vol, time);
+   gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+   osc.connect(gainNode);
+   osc.start(time);
+   osc.stop(time + 0.05);
+ } else if (soundType === 'rimshot') {
+   const noise = audioCtx.createBufferSource();
+   noise.buffer = noiseBuffer;
+   gainNode.gain.setValueAtTime(subVol * 0.6 * vol, time);
+   gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.02);
+   noise.connect(gainNode);
+   noise.start(time);
+ } else {
+   osc.type = soundType;
+   osc.frequency.setValueAtTime(isMainBeat || isCountdownStep ? 700 : 500, time);
+   gainNode.gain.setValueAtTime(subVol * 0.4 * vol, time);
+   gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.035);
+   osc.connect(gainNode);
+   osc.start(time);
+   osc.stop(time + 0.035);
+ }
 }
 uiNotes.push({
 time: time,
@@ -1163,9 +1103,6 @@ metroVolInput.addEventListener('change', savePersistedData);
 document.addEventListener('click', (e) => {
 if (activeSubPopup && !e.target.closest('.beat-sub-popup') && !e.target.closest('.beat-number')) {
 closeBeatSubPopup();
-}
-if (activeSubdivisionPopup && !e.target.closest('.subdivision-popup') && !e.target.closest('.subdivision-current')) {
-closeSubdivisionPopup();
 }
 });
 setValidBpm(bpm);
