@@ -13,14 +13,29 @@
 --text-muted: #71717a;
 --knob-bg: radial-gradient(circle at 30% 30%, #2a2a32 0%, #121215 100%);
 }
-{
+* {
 box-sizing: border-box;
 user-select: none;
+-webkit-user-select: none;
 -webkit-tap-highlight-color: transparent;
+}
+/* Consenti la selezione solo negli input testuali */
+input[type="text"],
+input[type="number"]:not(.drag-field),
+textarea {
+user-select: text;
+-webkit-user-select: text;
 }
 :focus-visible {
 outline: 2px solid var(--accent-yellow);
 outline-offset: 2px;
+}
+/* Blocca la selezione del testo durante il drag del knob */
+body.is-dragging-knob,
+body.is-dragging-knob * {
+user-select: none !important;
+-webkit-user-select: none !important;
+cursor: ns-resize !important;
 }
 body {
 margin: 0;
@@ -106,6 +121,7 @@ display: flex;
 justify-content: center;
 align-items: center;
 transition: border-color 0.2s ease, box-shadow 0.2s ease;
+touch-action: none;
 }
 .master-knob:hover {
 border-color: var(--accent-yellow);
@@ -127,7 +143,6 @@ stroke-width: 3.5;
 .knob-ring .bg-circle {
 stroke: #23232a;
 stroke-linecap: round;
-/* Circonferenza = 2π×23 ≈ 144.513, arco 270° = 108.385 */
 stroke-dasharray: 108.385, 144.513;
 }
 .knob-ring .val-circle {
@@ -300,6 +315,27 @@ background: var(--accent-yellow);
 color: #000;
 border-color: var(--accent-yellow);
 transform: scale(0.96);
+}
+.btn-bpm-micro {
+background: var(--panel-inner);
+border: 1px solid var(--card-border);
+color: var(--text-muted);
+width: 34px;
+height: 34px;
+border-radius: 50%;
+font-weight: 700;
+font-size: 0.75rem;
+padding: 0;
+cursor: pointer;
+display: flex;
+justify-content: center;
+align-items: center;
+transition: all 0.1s ease;
+}
+.btn-bpm-micro:hover {
+background: rgba(255, 255, 255, 0.05);
+border-color: var(--text-main);
+color: var(--text-main);
 }
 .visualizer {
 background: var(--panel-inner);

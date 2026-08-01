@@ -81,11 +81,8 @@ let practiceStats = { totalMinutes: 0, sessions: 0, maxBpm: 0, lastSession: null
 let sessionStartTime = null;
 let sessionMaxBpm = 0;
 const SUBDIVISION_NAMES = ['','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settimine'];
-// Calcoli precisi per l'arco del knob
-// Raggio = 23, Circonferenza = 2π×23 ≈ 144.513
-// Arco visibile (270°) = 144.513 × (270/360) ≈ 108.385
-const KNOB_CIRCUMFERENCE = 2 * Math.PI * 23; // 144.513
-const KNOB_MAX_ARC = KNOB_CIRCUMFERENCE * (270 / 360); // 108.385
+const KNOB_CIRCUMFERENCE = 2 * Math.PI * 23;
+const KNOB_MAX_ARC = KNOB_CIRCUMFERENCE * (270 / 360);
 function loadPersistedData() {
 try {
 const savedMeasures = localStorage.getItem('metronome_measures_v5');
@@ -336,10 +333,8 @@ masterVolume = Math.min(1, Math.max(0, vol));
 const angle = -135 + (masterVolume * 270);
 knobIndicator.style.transform = `rotate(${angle}deg)`;
 masterValueText.innerText = `${Math.round(masterVolume * 100)}%`;
-// Calcolo preciso dell'arco: percentuale × arco massimo
 const currentArc = masterVolume * KNOB_MAX_ARC;
 if (masterVolume <= 0.005) {
-// Quando è a zero, il cerchio giallo sparisce
 valCircle.style.strokeDasharray = `0, ${KNOB_CIRCUMFERENCE}`;
 valCircle.style.opacity = '0';
 } else {
@@ -352,15 +347,28 @@ savePersistedData();
 }
 let isDraggingKnob = false, startY = 0, startVol = 0.5;
 masterKnob.addEventListener('mousedown', (e) => {
-isDraggingKnob = true; startY = e.clientY; startVol = masterVolume;
+e.preventDefault();
+isDraggingKnob = true;
+startY = e.clientY;
+startVol = masterVolume;
+document.body.classList.add('is-dragging-knob');
 });
 window.addEventListener('mousemove', (e) => {
 if (!isDraggingKnob) return;
+e.preventDefault();
 updateMasterKnobUI(startVol + ((startY - e.clientY) / 150));
 });
-window.addEventListener('mouseup', () => isDraggingKnob = false);
+window.addEventListener('mouseup', () => {
+if (isDraggingKnob) {
+isDraggingKnob = false;
+document.body.classList.remove('is-dragging-knob');
+}
+});
 masterKnob.addEventListener('touchstart', (e) => {
-isDraggingKnob = true; startY = e.touches[0].clientY; startVol = masterVolume;
+isDraggingKnob = true;
+startY = e.touches[0].clientY;
+startVol = masterVolume;
+document.body.classList.add('is-dragging-knob');
 e.preventDefault();
 }, { passive: false });
 window.addEventListener('touchmove', (e) => {
@@ -368,12 +376,19 @@ if (!isDraggingKnob) return;
 updateMasterKnobUI(startVol + ((startY - e.touches[0].clientY) / 150));
 e.preventDefault();
 }, { passive: false });
-window.addEventListener('touchend', () => isDraggingKnob = false);
+window.addEventListener('touchend', () => {
+if (isDraggingKnob) {
+isDraggingKnob = false;
+document.body.classList.remove('is-dragging-knob');
+}
+});
 masterKnob.addEventListener('keydown', (e) => {
 if (e.code === 'ArrowUp' || e.code === 'ArrowRight') {
-e.preventDefault(); updateMasterKnobUI(masterVolume + 0.05);
+e.preventDefault();
+updateMasterKnobUI(masterVolume + 0.05);
 } else if (e.code === 'ArrowDown' || e.code === 'ArrowLeft') {
-e.preventDefault(); updateMasterKnobUI(masterVolume - 0.05);
+e.preventDefault();
+updateMasterKnobUI(masterVolume - 0.05);
 }
 });
 function setupDragToAdjust(inputElem, onUpdate) {
