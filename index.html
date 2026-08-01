@@ -20,19 +20,6 @@
             <h1>Metronomo Poliritmico</h1>
             <span class="author">Creato da Marco Bozzo</span>
         </div>
-        <div class="header-actions">
-            <div class="master-knob-container">
-                <span class="master-label">Volume</span>
-                <div class="master-knob" id="masterKnob" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Volume Master">
-                    <svg class="knob-ring" viewBox="0 0 52 52">
-                        <circle class="bg-circle" cx="26" cy="26" r="23"></circle>
-                        <circle class="val-circle" id="valCircle" cx="26" cy="26" r="23"></circle>
-                    </svg>
-                    <div class="knob-indicator" id="knobIndicator"></div>
-                </div>
-                <span class="master-value-text" id="masterValueText">50%</span>
-            </div>
-        </div>
     </header>
 
     <div class="bpm-display">
@@ -59,9 +46,7 @@
 
     <div class="visualizer">
         <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
-        <div class="beat-dots" id="dotsContainer">
-            <!-- I pallini verranno generati qui via JS -->
-        </div>
+        <div class="beat-dots" id="dotsContainer"></div>
         <div class="beat-movement-display" id="movementDisplay">
             MOVIMENTO <span class="highlight">1</span> DI 4
         </div>
@@ -74,7 +59,7 @@
     <div class="settings-panel">
         <div class="setting-row">
             <label class="toggle-row">
-                <input type="checkbox" id="countdownToggle">
+                <input type="checkbox" id="countdownToggle" checked>
                 Countdown iniziale (4 battiti)
             </label>
         </div>
@@ -156,9 +141,7 @@
             </div>
         </div>
         
-        <div class="measures-list" id="measuresContainer">
-            <!-- Le battute verranno generate qui via JS -->
-        </div>
+        <div class="measures-list" id="measuresContainer"></div>
         
         <button id="addMeasureBtn" class="btn-add">+ AGGIUNGI BATTUTA</button>
     </div>
@@ -215,9 +198,7 @@
 <div class="custom-modal-overlay" id="statsModal">
     <div class="custom-modal-box" style="width: 320px;">
         <div class="modal-title">📊 Statistiche di Pratica</div>
-        <div class="stats-grid" id="statsGrid">
-            <!-- Stats injected via JS -->
-        </div>
+        <div class="stats-grid" id="statsGrid"></div>
         <div class="modal-buttons" style="justify-content: space-between; width: 100%;">
             <button class="btn-modal-cancel" id="statsResetBtn" style="background: var(--accent-red); color: white;">Azzera Statistiche</button>
             <button class="btn-modal-save" id="statsCloseBtn">Chiudi</button>

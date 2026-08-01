@@ -11,7 +11,6 @@
 --accent-orange-glow: rgba(251, 146, 60, 0.4);
 --text-main: #f4f4f5;
 --text-muted: #71717a;
---knob-bg: radial-gradient(circle at 30% 30%, #2a2a32 0%, #121215 100%);
 }
 {
 box-sizing: border-box;
@@ -49,19 +48,16 @@ box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 
 }
 header {
 display: flex;
-justify-content: space-between;
+justify-content: center;
 align-items: center;
 padding-bottom: 0.5rem;
 border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
-.header-actions {
-display: flex;
-align-items: center;
-gap: 12px;
-}
 .brand-title {
 display: flex;
 flex-direction: column;
+align-items: center;
+text-align: center;
 }
 header h1 {
 font-size: 1.3rem;
@@ -79,76 +75,6 @@ letter-spacing: 1px;
 color: var(--accent-yellow);
 margin-top: 0.25rem;
 text-transform: uppercase;
-}
-.master-knob-container {
-display: flex;
-flex-direction: column;
-align-items: center;
-gap: 0.3rem;
-}
-.master-label {
-font-size: 0.6rem;
-font-weight: 800;
-color: var(--text-muted);
-letter-spacing: 2px;
-text-transform: uppercase;
-}
-.master-knob {
-width: 54px;
-height: 54px;
-border-radius: 50%;
-background: var(--knob-bg);
-border: 1px solid #2e2e38;
-box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 6px 14px rgba(0,0,0,0.6);
-position: relative;
-cursor: ns-resize;
-display: flex;
-justify-content: center;
-align-items: center;
-transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.master-knob:hover {
-border-color: var(--accent-yellow);
-box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 0 12px var(--accent-glow);
-}
-.knob-ring {
-position: absolute;
-top: 0;
-left: 0;
-width: 52px;
-height: 52px;
-pointer-events: none;
-transform: rotate(135deg);
-}
-.knob-ring circle {
-fill: none;
-stroke-width: 3.5;
-}
-.knob-ring .bg-circle {
-stroke: #23232a;
-stroke-linecap: round;
-stroke-dasharray: 63.61, 84.82;
-}
-.knob-ring .val-circle {
-stroke: var(--accent-yellow);
-stroke-dasharray: 0, 84.82;
-transition: stroke-dasharray 0.05s linear, opacity 0.05s ease;
-}
-.knob-indicator {
-width: 3px;
-height: 12px;
-background: var(--accent-yellow);
-border-radius: 2px;
-position: absolute;
-top: 6px;
-transform-origin: 50% 21px;
-box-shadow: 0 0 8px var(--accent-yellow);
-}
-.master-value-text {
-font-size: 0.7rem;
-font-weight: 800;
-color: var(--accent-yellow);
-font-variant-numeric: tabular-nums;
 }
 .bpm-display {
 background: var(--panel-inner);
@@ -298,27 +224,6 @@ background: var(--accent-yellow);
 color: #000;
 border-color: var(--accent-yellow);
 transform: scale(0.96);
-}
-.btn-bpm-micro {
-background: var(--panel-inner);
-border: 1px solid var(--card-border);
-color: var(--text-muted);
-width: 34px;
-height: 34px;
-border-radius: 50%;
-font-weight: 700;
-font-size: 0.75rem;
-padding: 0;
-cursor: pointer;
-display: flex;
-justify-content: center;
-align-items: center;
-transition: all 0.1s ease;
-}
-.btn-bpm-micro:hover {
-background: rgba(255, 255, 255, 0.05);
-border-color: var(--text-main);
-color: var(--text-main);
 }
 .visualizer {
 background: var(--panel-inner);
@@ -758,7 +663,6 @@ transition: background 0.15s;
 .btn-add:hover {
 background: rgba(250, 204, 21, 0.05);
 }
-/* TASTO AVVIA STANDARD (NON FISSO / NOT STICKY) */
 .controls {
 display: flex;
 flex-direction: column;
@@ -893,7 +797,6 @@ font-size: 0.75rem;
 color: var(--text-muted);
 font-style: italic;
 padding: 0.5rem 0;
-/* NUOVO STILE PER IL RIQUADRO VUOTO */
 text-align: center;
 border: 1px dashed var(--text-muted);
 border-radius: 14px;
@@ -945,8 +848,6 @@ color: var(--text-muted);
 text-transform: uppercase;
 font-weight: 700;
 }
-
-/* NUOVO STILE PER CENTRARE IL PULSANTE CONDIVIDI */
 .share-link-container {
     display: flex;
     justify-content: center;
@@ -972,8 +873,6 @@ font-weight: 700;
     border-color: var(--accent-yellow);
     color: var(--accent-yellow);
 }
-
-/* NUOVO STILE PER IL SELETTORE SUDDIVISIONE CUSTOM */
 .subdivision-selector {
     position: relative;
     display: inline-block;
