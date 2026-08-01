@@ -21,7 +21,6 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Consenti la selezione solo negli input testuali */
 input[type="text"],
 input[type="number"]:not(.drag-field),
 textarea {
@@ -34,7 +33,6 @@ textarea {
     outline-offset: 2px;
 }
 
-/* Blocca la selezione del testo durante il drag del knob */
 body.is-dragging-knob,
 body.is-dragging-knob * {
     user-select: none !important;
@@ -1187,26 +1185,42 @@ select:focus, select:hover {
     border-color: transparent transparent var(--accent-yellow) transparent;
 }
 
-/* --- AGGIUNTA PER RESPONSIVE MOBILE --- */
-
+/* --- RESPONSIVE MOBILE FIXES --- */
 @media screen and (max-width: 600px) {
-    /* Riduce il padding generale del contenitore */
     .app-container {
         padding: 1rem;
         gap: 1rem;
         border-radius: 20px;
         max-width: 100%;
-        margin: 0 10px; /* Margine laterale per non attaccare ai bordi */
+        margin: 0 10px;
     }
 
-    /* Adatta l'header */
     header h1 {
         font-size: 1.1rem;
     }
     
-    /* Rende il display BPM più compatto */
+    /* Layout specifico per la riga Tap Tempo su mobile */
+    .tap-tempo-row {
+        justify-content: flex-start; /* Allinea a sinistra */
+        padding: 0 1rem; /* Padding laterale per non attaccare ai bordi */
+        margin-top: 1rem;
+        gap: 0.8rem;
+    }
+
+    .btn-tap {
+        flex-grow: 1; /* Il pulsante Tap Tempo occupa lo spazio disponibile */
+        text-align: center;
+        padding: 0.6rem 1rem;
+    }
+
+    .btn-bpm-micro {
+        width: 40px;
+        height: 40px;
+        font-size: 0.85rem;
+    }
+
     .bpm-value {
-        font-size: 3rem; /* Era 3.8rem, troppo grande per mobile */
+        font-size: 3rem;
         width: 140px;
     }
 
@@ -1214,13 +1228,11 @@ select:focus, select:hover {
         padding: 1rem 0.5rem;
     }
 
-    /* Pulsanti +/- BPM più facili da premere ma compatti */
     .btn-bpm-step {
         width: 34px;
         height: 34px;
     }
 
-    /* Visualizer e dots */
     .visualizer {
         min-height: 160px;
         padding: 1rem 0.2rem;
@@ -1242,7 +1254,6 @@ select:focus, select:hover {
         height: 18px;
     }
 
-    /* Lista delle battute: impila meglio gli elementi se lo schermo è stretto */
     .measure-row {
         flex-wrap: wrap;
         justify-content: center;
@@ -1255,7 +1266,6 @@ select:focus, select:hover {
         justify-content: center;
     }
 
-    /* Controlli Settings */
     .setting-row {
         flex-direction: column;
         align-items: flex-start;
@@ -1266,13 +1276,11 @@ select:focus, select:hover {
         width: 100%;
     }
 
-    /* Pulsante Play più grande per il touch */
     .btn-play {
         padding: 1rem;
         font-size: 1rem;
     }
     
-    /* Knob Master Volume leggermente più piccolo su mobile */
     .master-knob {
         width: 48px;
         height: 48px;
@@ -1283,7 +1291,6 @@ select:focus, select:hover {
     }
 }
 
-/* Fix specifico per schermi molto piccoli (es. vecchi iPhone) */
 @media screen and (max-width: 380px) {
     .bpm-value {
         font-size: 2.5rem;
