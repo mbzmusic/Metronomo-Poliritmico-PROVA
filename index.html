@@ -2,113 +2,238 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Il tuo Sito</title>
-    <style>
-        /* Stili generali della pagina */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f9f9f9;
-            color: #333;
-        }
-
-        header {
-            background-color: #2c3e50;
-            color: white;
-            padding: 20px;
-            text-align: center;
-        }
-
-        main {
-            padding: 30px 20px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        footer {
-            background-color: #2c3e50;
-            color: white;
-            text-align: center;
-            padding: 15px;
-            margin-top: 40px;
-        }
-
-        h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #2c3e50;
-        }
-
-        /* --- GRIGLIA QUARTINE (DESKTOP: 4 IN RIGA / SMARTPHONE: 2X2) --- */
-        .contenitore-quartine {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr); /* 4 colonne affiancate su desktop */
-            gap: 20px; /* Spazio tra gli elementi */
-        }
-
-        .quartina {
-            background-color: #ffffff;
-            border: 1px solid #e1e1e1;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            box-sizing: border-box;
-        }
-
-        .quartina h3 {
-            margin-top: 0;
-            color: #2c3e50;
-            font-size: 1.1rem;
-        }
-
-        .quartina p {
-            margin-bottom: 0;
-            line-height: 1.5;
-            color: #555;
-        }
-
-        /* Regola specifica per Smartphone: schermi fino a 768px */
-        @media (max-width: 768px) {
-            .contenitore-quartine {
-                grid-template-columns: repeat(2, 1fr); /* Forza esattamente 2 colonne per rigo (2x2) */
-            }
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Metronomo Poliritmico - Marco Bozzo</title>
+    <link rel="manifest" href="manifest.json?v=2">
+    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+    <link rel="apple-touch-icon" href="icon-192.png?v=2">
+    <meta name="theme-color" content="#0e0e11">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
 
+<div class="app-container">
     <header>
-        <h1>Titolo del Sito</h1>
-    </header>
-
-    <main>
-        <h2>Le tue Quartine</h2>
-        
-        <div class="contenitore-quartine">
-            <div class="quartina">
-                <h3>Quartina 1</h3>
-                <p>Testo della prima quartina inserito qui...</p>
-            </div>
-            <div class="quartina">
-                <h3>Quartina 2</h3>
-                <p>Testo della seconda quartina inserito qui...</p>
-            </div>
-            <div class="quartina">
-                <h3>Quartina 3</h3>
-                <p>Testo della terza quartina inserito qui...</p>
-            </div>
-            <div class="quartina">
-                <h3>Quartina 4</h3>
-                <p>Testo della quarta quartina inserito qui...</p>
+        <div class="brand-title">
+            <h1>Metronomo Poliritmico</h1>
+            <span class="author">Creato da Marco Bozzo</span>
+        </div>
+        <div class="header-actions">
+            <div class="master-knob-container">
+                <span class="master-label">Volume</span>
+                <div class="master-knob" id="masterKnob" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Volume Master">
+                    <svg class="knob-ring" viewBox="0 0 52 52">
+                        <circle class="bg-circle" cx="26" cy="26" r="23"></circle>
+                        <circle class="val-circle" id="valCircle" cx="26" cy="26" r="23"></circle>
+                    </svg>
+                    <div class="knob-indicator" id="knobIndicator"></div>
+                </div>
+                <span class="master-value-text" id="masterValueText">50%</span>
             </div>
         </div>
-    </main>
+    </header>
 
-    <footer>
-        <p>&copy; 2026 - Tutti i diritti riservati</p>
-    </footer>
+    <div class="bpm-display">
+        <div class="bpm-row-top">
+            <button class="btn-bpm-step" id="bpmMinus1">−</button>
+            
+            <div class="bpm-value-container">
+                <input type="number" id="bpmVal" class="bpm-value drag-field" value="120" min="20" max="300" step="1">
+                <span class="agogica-label" id="agogicaLabel">Allegro</span>
+                <span class="bpm-label">Battiti per Minuto (BPM)</span>
+            </div>
 
+            <button class="btn-bpm-step" id="bpmPlus1">+</button>
+        </div>
+        
+        <input type="range" id="bpmSlider" class="bpm-slider" min="20" max="300" value="120" step="1">
+        
+        <!-- Spostati qui i pulsanti -5 e +5 come richiesto -->
+        <div class="tap-tempo-row">
+            <button id="tapTempoBtn" class="btn-tap">TAP TEMPO</button>
+            <button class="btn-bpm-step" id="bpmMinus5">−5</button>
+            <button class="btn-bpm-step" id="bpmPlus5">+5</button>
+        </div>
+    </div>
+
+    <div class="visualizer">
+        <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
+        <div class="beat-dots" id="dotsContainer"></div>
+        <div class="beat-movement-display" id="movementDisplay">
+            MOVIMENTO <span class="highlight">1</span> DI 4
+        </div>
+        <div class="dot-hint">
+            Clicca sul pallino per: Normale (Grigio) &nbsp;→&nbsp; Accento (Arancione) &nbsp;→&nbsp; Muto (Rosso)<br>
+            · Tieni premuto sul numero del beat per cambiare la suddivisione
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <div class="setting-row">
+            <label class="toggle-row">
+                <input type="checkbox" id="countdownToggle" checked>
+                Countdown iniziale (4 battiti)
+            </label>
+        </div>
+
+        <div class="setting-row">
+            <label class="toggle-row">
+                <input type="checkbox" id="trainerToggle">
+                Tempo Trainer (Incremento automatico)
+            </label>
+        </div>
+        <div class="setting-row trainer-config-row" id="trainerConfigRow" style="opacity: 0.5;">
+            <span>Aumenta di:</span>
+            <div class="trainer-inputs">
+                <input type="number" id="trainerBpmInc" value="2" min="1" max="20"> BPM ogni 
+                <input type="number" id="trainerBarsInc" value="4" min="1" max="32"> Battute
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <label class="toggle-row">
+                <input type="checkbox" id="silentModeToggle">
+                Silenzio a Intervalli (Bruce Lee Mode)
+            </label>
+        </div>
+        <div class="setting-row trainer-config-row" id="silentConfigRow" style="opacity: 0.5;">
+            <span>Suona per:</span>
+            <div class="trainer-inputs">
+                <input type="number" id="silentAudibleBars" value="2" min="1" max="16"> Battute, poi taci per 
+                <input type="number" id="silentMuteBars" value="1" min="1" max="16"> Battute
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <label>Swing / Shuffle:</label>
+            <div style="display:flex; align-items:center; gap:8px; width: 60%;">
+                <input type="range" id="swingAmount" min="0" max="75" value="0" step="1">
+                <span id="swingValueText" style="font-size:0.7rem; font-weight:700; color:var(--accent-yellow); width: 35px; text-align:right;">0%</span>
+            </div>
+        </div>
+
+        <div class="setting-row">
+            <label>Suono Suddivisioni:</label>
+            <select id="soundWaveSelect">
+                <option value="sine">Sinusoidale (Morbido)</option>
+                <option value="triangle">Triangolare (Legnoso)</option>
+                <option value="square">Quadrata (8-bit)</option>
+                <option value="woodblock">Woodblock (Legnetto)</option>
+                <option value="cowbell">Cowbell (Campaccio)</option>
+                <option value="rimshot">Rimshot (Rullante)</option>
+            </select>
+        </div>
+
+        <div class="setting-row">
+            <label>Vol. Metronomo:</label>
+            <input type="range" id="metroVol" min="0" max="1" step="0.05" value="0.8" style="width: 60%;">
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <div class="section-title-bar">
+            <h2>Preset Salvati</h2>
+            <button id="savePresetBtn" class="btn-action">+ Salva Preset</button>
+        </div>
+        <div class="presets-list" id="presetsContainer">
+            <div class="presets-empty" id="presetsEmpty">Nessun preset salvato. Configura una sequenza e premi "+ Salva Preset".</div>
+        </div>
+        
+        <div class="share-link-container">
+            <button id="shareLinkBtn" class="btn-share">🔗 Copia Link Condivisibile</button>
+        </div>
+    </div>
+
+    <div class="settings-panel">
+        <div class="section-title-bar">
+            <h2>Sequenza Battute</h2>
+            <div style="display:flex; gap:0.5rem;">
+                <button id="resetSequenceBtn" class="btn-action">Reset Default</button>
+                <button id="resetAccentsBtn" class="btn-action">Reset accenti</button>
+            </div>
+        </div>
+        
+        <div class="measures-list" id="measuresContainer"></div>
+        
+        <button id="addMeasureBtn" class="btn-add">+ AGGIUNGI BATTUTA</button>
+    </div>
+
+    <div class="controls">
+        <button id="playBtn" class="btn-play">AVVIA</button>
+        <div class="shortcut-hint">SPAZIO: AVVIO/STOP · ↑↓ TEMPO (SHIFT = ±5)</div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 1rem;">
+        <button id="statsBtn" class="btn-action" style="font-size: 0.7rem;">📊 Statistiche di Pratica</button>
+    </div>
+
+</div>
+
+<!-- MODAL CUSTOM TIME SIGNATURE -->
+<div class="custom-modal-overlay" id="customModal">
+    <div class="custom-modal-box">
+        <div class="modal-title">Metro Personalizzato</div>
+        <div class="modal-inputs-row">
+            <div class="modal-field">
+                <label>Numeratore</label>
+                <input type="number" id="customBeatsInput" min="1" max="64" value="5">
+            </div>
+            <div style="font-size:1.5rem; color:var(--text-muted);">/</div>
+            <div class="modal-field">
+                <label>Denominatore</label>
+                <input type="number" id="customSubInput" min="1" max="64" value="4">
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-modal-cancel" id="customModalCancel">Annulla</button>
+            <button class="btn-modal-save" id="customModalSave">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SAVE PRESET -->
+<div class="custom-modal-overlay" id="savePresetModal">
+    <div class="custom-modal-box">
+        <div class="modal-title">Salva Preset</div>
+        <div class="modal-field" style="width:100%">
+            <label>Nome Preset</label>
+            <input type="text" id="presetNameInput" placeholder="Es. Studio Terzine" style="width:100%; padding:0.5rem; background:var(--panel-inner); border:1px solid var(--card-border); color:#fff; border-radius:8px; text-align:center;">
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-modal-cancel" id="savePresetCancel">Annulla</button>
+            <button class="btn-modal-save" id="savePresetConfirm">Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL STATS -->
+<div class="custom-modal-overlay" id="statsModal">
+    <div class="custom-modal-box" style="width: 320px;">
+        <div class="modal-title">📊 Statistiche di Pratica</div>
+        <div class="stats-grid" id="statsGrid"></div>
+        <div class="modal-buttons" style="justify-content: space-between; width: 100%;">
+            <button class="btn-modal-cancel" id="statsResetBtn" style="background: var(--accent-red); color: white;">Azzera Statistiche</button>
+            <button class="btn-modal-save" id="statsCloseBtn">Chiudi</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SHARED IMPORT -->
+<div class="custom-modal-overlay" id="sharedImportModal">
+    <div class="custom-modal-box">
+        <div class="modal-title">Esercizio Condiviso</div>
+        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin: 0.5rem 0;">
+            È stato rilevato un esercizio condiviso tramite link. Vuoi caricarlo? La sequenza corrente verrà sostituita.
+        </p>
+        <div class="modal-buttons">
+            <button class="btn-modal-cancel" id="sharedImportCancel">Ignora</button>
+            <button class="btn-modal-save" id="sharedImportConfirm">Carica</button>
+        </div>
+    </div>
+</div>
+
+<script src="script.js?v=2"></script>
 </body>
 </html>
