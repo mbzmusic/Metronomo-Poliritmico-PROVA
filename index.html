@@ -20,6 +20,19 @@
             <h1>Metronomo Poliritmico</h1>
             <span class="author">Creato da Marco Bozzo</span>
         </div>
+        <div class="header-actions">
+            <div class="master-knob-container">
+                <span class="master-label">Volume</span>
+                <div class="master-knob" id="masterKnob" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Volume Master">
+                    <svg class="knob-ring" viewBox="0 0 52 52">
+                        <circle class="bg-circle" cx="26" cy="26" r="23"></circle>
+                        <circle class="val-circle" id="valCircle" cx="26" cy="26" r="23"></circle>
+                    </svg>
+                    <div class="knob-indicator" id="knobIndicator"></div>
+                </div>
+                <span class="master-value-text" id="masterValueText">50%</span>
+            </div>
+        </div>
     </header>
 
     <div class="bpm-display">

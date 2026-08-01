@@ -11,6 +11,7 @@
 --accent-orange-glow: rgba(251, 146, 60, 0.4);
 --text-main: #f4f4f5;
 --text-muted: #71717a;
+--knob-bg: radial-gradient(circle at 30% 30%, #2a2a32 0%, #121215 100%);
 }
 {
 box-sizing: border-box;
@@ -48,16 +49,19 @@ box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8), inset 0 1px 1px rgba(255, 255, 255, 
 }
 header {
 display: flex;
-justify-content: center;
+justify-content: space-between;
 align-items: center;
 padding-bottom: 0.5rem;
 border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
+.header-actions {
+display: flex;
+align-items: center;
+gap: 12px;
+}
 .brand-title {
 display: flex;
 flex-direction: column;
-align-items: center;
-text-align: center;
 }
 header h1 {
 font-size: 1.3rem;
@@ -75,6 +79,78 @@ letter-spacing: 1px;
 color: var(--accent-yellow);
 margin-top: 0.25rem;
 text-transform: uppercase;
+}
+.master-knob-container {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 0.3rem;
+}
+.master-label {
+font-size: 0.6rem;
+font-weight: 800;
+color: var(--text-muted);
+letter-spacing: 2px;
+text-transform: uppercase;
+}
+.master-knob {
+width: 54px;
+height: 54px;
+border-radius: 50%;
+background: var(--knob-bg);
+border: 1px solid #2e2e38;
+box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 6px 14px rgba(0,0,0,0.6);
+position: relative;
+cursor: ns-resize;
+display: flex;
+justify-content: center;
+align-items: center;
+transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.master-knob:hover {
+border-color: var(--accent-yellow);
+box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 0 12px var(--accent-glow);
+}
+.knob-ring {
+position: absolute;
+top: 0;
+left: 0;
+width: 52px;
+height: 52px;
+pointer-events: none;
+transform: rotate(135deg);
+}
+.knob-ring circle {
+fill: none;
+stroke-width: 3.5;
+}
+.knob-ring .bg-circle {
+stroke: #23232a;
+stroke-linecap: round;
+/* Circonferenza = 2π×23 ≈ 144.513, arco 270° = 108.385 */
+stroke-dasharray: 108.385, 144.513;
+}
+.knob-ring .val-circle {
+stroke: var(--accent-yellow);
+stroke-linecap: round;
+stroke-dasharray: 0, 144.513;
+transition: stroke-dasharray 0.05s linear, opacity 0.15s ease;
+}
+.knob-indicator {
+width: 3px;
+height: 12px;
+background: var(--accent-yellow);
+border-radius: 2px;
+position: absolute;
+top: 6px;
+transform-origin: 50% 21px;
+box-shadow: 0 0 8px var(--accent-yellow);
+}
+.master-value-text {
+font-size: 0.7rem;
+font-weight: 800;
+color: var(--accent-yellow);
+font-variant-numeric: tabular-nums;
 }
 .bpm-display {
 background: var(--panel-inner);

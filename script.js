@@ -2,8 +2,7 @@ let audioCtx = null;
 let masterGainNode = null;
 let isPlaying = false;
 let bpm = 120;
-// Volume master fisso a 1.0 (il volume è controllato solo da "Vol. Metronomo")
-let masterVolume = 1.0;
+let masterVolume = 0.5;
 let inCountdown = false;
 let countdownBeat = 0;
 const COUNTDOWN_TOTAL = 4;
@@ -42,6 +41,10 @@ const trainerToggle = document.getElementById('trainerToggle');
 const trainerConfigRow = document.getElementById('trainerConfigRow');
 const trainerBpmInc = document.getElementById('trainerBpmInc');
 const trainerBarsInc = document.getElementById('trainerBarsInc');
+const masterKnob = document.getElementById('masterKnob');
+const knobIndicator = document.getElementById('knobIndicator');
+const masterValueText = document.getElementById('masterValueText');
+const valCircle = document.getElementById('valCircle');
 const metroVolInput = document.getElementById('metroVol');
 const soundWaveSelect = document.getElementById('soundWaveSelect');
 const tapTempoBtn = document.getElementById('tapTempoBtn');
@@ -78,6 +81,11 @@ let practiceStats = { totalMinutes: 0, sessions: 0, maxBpm: 0, lastSession: null
 let sessionStartTime = null;
 let sessionMaxBpm = 0;
 const SUBDIVISION_NAMES = ['','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settimine'];
+// Calcoli precisi per l'arco del knob
+// Raggio = 23, Circonferenza = 2π×23 ≈ 144.513
+// Arco visibile (270°) = 144.513 × (270/360) ≈ 108.385
+const KNOB_CIRCUMFERENCE = 2 * Math.PI * 23; // 144.513
+const KNOB_MAX_ARC = KNOB_CIRCUMFERENCE * (270 / 360); // 108.385
 function loadPersistedData() {
 try {
 const savedMeasures = localStorage.getItem('metronome_measures_v5');
@@ -101,6 +109,8 @@ measures.push({ beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], i
 }
 const savedBpm = localStorage.getItem('metronome_bpm_v1');
 bpm = savedBpm ? Math.min(300, Math.max(20, parseInt(savedBpm, 10) || 120)) : 120;
+const savedVol = localStorage.getItem('metronome_vol_v4');
+if (savedVol) masterVolume = parseFloat(savedVol);
 const savedSound = localStorage.getItem('metronome_sound_v4');
 if (savedSound) soundWaveSelect.value = savedSound;
 const savedMetroVol = localStorage.getItem('metronome_metrovol_v1');
@@ -115,6 +125,7 @@ bpm = 120;
 function savePersistedData() {
 try {
 localStorage.setItem('metronome_measures_v5', JSON.stringify(measures));
+localStorage.setItem('metronome_vol_v4', masterVolume);
 localStorage.setItem('metronome_sound_v4', soundWaveSelect.value);
 localStorage.setItem('metronome_bpm_v1', bpm);
 localStorage.setItem('metronome_metrovol_v1', metroVolInput.value);
@@ -320,6 +331,51 @@ if (val  < 168) return  "Allegro";
 if (val  < 200) return  "Presto";
 return  "Prestissimo";
 }
+function updateMasterKnobUI(vol) {
+masterVolume = Math.min(1, Math.max(0, vol));
+const angle = -135 + (masterVolume * 270);
+knobIndicator.style.transform = `rotate(${angle}deg)`;
+masterValueText.innerText = `${Math.round(masterVolume * 100)}%`;
+// Calcolo preciso dell'arco: percentuale × arco massimo
+const currentArc = masterVolume * KNOB_MAX_ARC;
+if (masterVolume <= 0.005) {
+// Quando è a zero, il cerchio giallo sparisce
+valCircle.style.strokeDasharray = `0, ${KNOB_CIRCUMFERENCE}`;
+valCircle.style.opacity = '0';
+} else {
+valCircle.style.strokeDasharray = `${currentArc}, ${KNOB_CIRCUMFERENCE}`;
+valCircle.style.opacity = '1';
+}
+masterKnob.setAttribute('aria-valuenow', Math.round(masterVolume * 100));
+if (masterGainNode) masterGainNode.gain.value = masterVolume;
+savePersistedData();
+}
+let isDraggingKnob = false, startY = 0, startVol = 0.5;
+masterKnob.addEventListener('mousedown', (e) => {
+isDraggingKnob = true; startY = e.clientY; startVol = masterVolume;
+});
+window.addEventListener('mousemove', (e) => {
+if (!isDraggingKnob) return;
+updateMasterKnobUI(startVol + ((startY - e.clientY) / 150));
+});
+window.addEventListener('mouseup', () => isDraggingKnob = false);
+masterKnob.addEventListener('touchstart', (e) => {
+isDraggingKnob = true; startY = e.touches[0].clientY; startVol = masterVolume;
+e.preventDefault();
+}, { passive: false });
+window.addEventListener('touchmove', (e) => {
+if (!isDraggingKnob) return;
+updateMasterKnobUI(startVol + ((startY - e.touches[0].clientY) / 150));
+e.preventDefault();
+}, { passive: false });
+window.addEventListener('touchend', () => isDraggingKnob = false);
+masterKnob.addEventListener('keydown', (e) => {
+if (e.code === 'ArrowUp' || e.code === 'ArrowRight') {
+e.preventDefault(); updateMasterKnobUI(masterVolume + 0.05);
+} else if (e.code === 'ArrowDown' || e.code === 'ArrowLeft') {
+e.preventDefault(); updateMasterKnobUI(masterVolume - 0.05);
+}
+});
 function setupDragToAdjust(inputElem, onUpdate) {
 let isDragging = false;
 let startY = 0;
@@ -389,7 +445,7 @@ setTimeout(() => tapTempoBtn.classList.remove('tapped'), 100);
 });
 window.addEventListener('keydown', (e) => {
 const activeTag = document.activeElement.tagName;
-if (activeTag === 'INPUT' || activeTag === 'SELECT') return;
+if (activeTag === 'INPUT' || activeTag === 'SELECT' || document.activeElement === masterKnob) return;
 if (e.code === 'Space') {
 e.preventDefault();
 togglePlayback();
@@ -1098,6 +1154,7 @@ closeSubdivisionPopup();
 }
 });
 setValidBpm(bpm);
+updateMasterKnobUI(masterVolume);
 renderMeasuresList();
 renderDots(0, -1, -1);
 swingValueText.innerText = `${swingAmount.value}%`;
