@@ -26,6 +26,10 @@ let measures = [
 ];
 let targetCustomIndex = null;
 
+// Nomi delle suddivisioni, condivisi tra il popup dei pallini numerati e quello
+// della sezione "Sequenza Battute" cosi' i due controlli restano identici.
+const SUB_NAMES = ['', 'Quarti', 'Crome', 'Terzine', 'Quartine', 'Quintine', 'Sestine', 'Settime'];
+
 const bpmSlider = document.getElementById('bpmSlider');
 const bpmVal = document.getElementById('bpmVal');
 const agogicaLabel = document.getElementById('agogicaLabel');
@@ -643,14 +647,11 @@ function renderMeasuresList() {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
                 ` : ''}
-                <select class="measure-select subdivision" onchange="updateMeasure(${index}, 'sub', this.value)" aria-label="Suddivisione">
-                    <option value="1" ${m.sub === 1 ? 'selected' : ''}>Quarti</option>
-                    <option value="2" ${m.sub === 2 ? 'selected' : ''}>Crome</option>
-                    <option value="3" ${m.sub === 3 ? 'selected' : ''}>Terzine</option>
-                    <option value="4" ${m.sub === 4 ? 'selected' : ''}>Quartine</option>
-                    <option value="5" ${m.sub === 5 ? 'selected' : ''}>Quintine</option>
-                    <option value="6" ${m.sub === 6 ? 'selected' : ''}>Sestine</option>
-                </select>
+                <div class="subdivision-selector">
+                    <div class="subdivision-current" tabindex="0" role="button" aria-haspopup="true" aria-label="Suddivisione: ${SUB_NAMES[m.sub] || 'Crome'}"
+                        onclick="event.stopPropagation(); window.toggleMeasureSubPopup(${index}, this)"
+                        onkeydown="if(event.code==='Enter'||event.code==='Space'){event.preventDefault();event.stopPropagation();window.toggleMeasureSubPopup(${index}, this)}">${SUB_NAMES[m.sub] || 'Crome'}</div>
+                </div>
                 <select class="measure-select repeat" onchange="updateMeasure(${index}, 'repeat', this.value)" aria-label="Ripetizioni">
                     ${repeatOptions}
                 </select>
@@ -883,12 +884,11 @@ function showBeatSubPopup(beatNumberElem, measureIndex, beatIndex) {
     
     const m = measures[measureIndex];
     const currentSub = m.beatSubs[beatIndex];
-    const subNames = [' ','Quarti','Crome','Terzine','Quartine','Quintine','Sestine','Settime'];
     
     for (let i = 1; i <= 7; i++) {
         const opt = document.createElement('div');
         opt.className = 'sub-popup-option' + (i === currentSub ? ' selected' : '');
-        opt.textContent = subNames[i];
+        opt.textContent = SUB_NAMES[i];
         opt.addEventListener('click', (e) => {
             e.stopPropagation();
             updateBeatSubdivision(measureIndex, beatIndex, i);
@@ -905,6 +905,44 @@ function showBeatSubPopup(beatNumberElem, measureIndex, beatIndex) {
         popup.classList.add('active');
     });
 }
+
+// Stesso meccanismo di showBeatSubPopup, ma per il selettore "Suddivisione"
+// nella sezione Sequenza Battute: un menu a comparsa personalizzato identico
+// nello stile a quello dei pallini numerati, al posto del <select> nativo.
+function showMeasureSubPopup(triggerElem, index) {
+    closeBeatSubPopup();
+    
+    const m = measures[index];
+    const popup = document.createElement('div');
+    popup.className = 'subdivision-popup';
+    
+    for (let i = 1; i <= 6; i++) {
+        const opt = document.createElement('div');
+        opt.className = 'sub-popup-option' + (i === m.sub ? ' selected' : '');
+        opt.textContent = SUB_NAMES[i];
+        opt.addEventListener('click', (e) => {
+            e.stopPropagation();
+            updateMeasure(index, 'sub', String(i));
+            closeBeatSubPopup();
+        });
+        popup.appendChild(opt);
+    }
+    
+    triggerElem.parentElement.appendChild(popup);
+    activeSubPopup = popup;
+    
+    requestAnimationFrame(() => {
+        popup.classList.add('active');
+    });
+}
+
+window.toggleMeasureSubPopup = function(index, triggerElem) {
+    const wasOpenForThis = activeSubPopup && triggerElem.parentElement.contains(activeSubPopup);
+    closeBeatSubPopup();
+    if (!wasOpenForThis) {
+        showMeasureSubPopup(triggerElem, index);
+    }
+};
 
 function setupBeatLongPress(elem, measureIndex, beatIndex) {
     let timer = null;
@@ -960,33 +998,126 @@ function updateBeatSubdivision(measureIndex, beatIndex, newSub) {
     savePersistedData();
 }
 
-function renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode = false, currentRepeat = -1) {
+// Stato della struttura DOM correntemente costruita nel visualizzatore.
+// Evita di distruggere e ricreare tutti i pallini ad ogni tick (che causava
+// micro-scatti di layout e "tap persi" sul pulsante AVVIA/FERMA durante la
+// riproduzione): il DOM viene ricostruito solo quando cambia davvero la
+// struttura della battuta (o la battuta stessa); altrimenti si aggiornano
+// solo le classi CSS sugli elementi già esistenti.
+let dotsRenderState = null;
+
+function applyDotAccentClass(dot, state) {
+    dot.classList.remove('state-accent', 'state-mute');
+    if (state === 1) dot.classList.add('state-accent');
+    if (state === 2) dot.classList.add('state-mute');
+    const beatNum = parseInt(dot.dataset.beat, 10) + 1;
+    const subNum = parseInt(dot.dataset.sub, 10) + 1;
+    const stateLabel = state === 1 ? 'accento' : state === 2 ? 'muto' : 'normale';
+    dot.setAttribute('aria-label', `Battuta ${beatNum}, suddivisione ${subNum}, stato ${stateLabel}`);
+}
+
+function buildMeasureDots(measureIndex, config, key) {
     dotsContainer.innerHTML = '';
-    
-    if (isCountdownMode) {
-        const remainingBeats = COUNTDOWN_TOTAL - activeSubBeatInBeat;
-        currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
-        movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
-        
+    const dotEls = [];
+    const beatNumEls = [];
+    let globalSubBeatIndex = 0;
+
+    for (let b = 0; b < config.beats; b++) {
+        const group = document.createElement('div');
+        group.className = 'beat-group';
+
+        const beatNumber = document.createElement('div');
+        beatNumber.className = 'beat-number';
+        beatNumber.textContent = b + 1;
+        setupBeatLongPress(beatNumber, measureIndex, b);
+        group.appendChild(beatNumber);
+        beatNumEls.push(beatNumber);
+
+        const dotsRow = document.createElement('div');
+        dotsRow.className = 'beat-dots-row';
+
+        for (let s = 0; s < config.beatSubs[b]; s++) {
+            const dotIdx = globalSubBeatIndex;
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+            if (s === 0) dot.classList.add('downbeat');
+            dot.dataset.beat = String(b);
+            dot.dataset.sub = String(s);
+
+            dot.setAttribute('role', 'button');
+            dot.setAttribute('tabindex', '0');
+
+            const cycleState = () => {
+                const st = config.accents[dotIdx] || 0;
+                config.accents[dotIdx] = (st + 1) % 3;
+                applyDotAccentClass(dot, config.accents[dotIdx]);
+                savePersistedData();
+            };
+
+            dot.addEventListener('click', cycleState);
+            dot.addEventListener('keydown', (e) => {
+                if (e.code === 'Enter' || e.code === 'Space') {
+                    e.preventDefault();
+                    cycleState();
+                }
+            });
+
+            applyDotAccentClass(dot, config.accents[dotIdx] || 0);
+
+            dotsRow.appendChild(dot);
+            dotEls.push(dot);
+            globalSubBeatIndex++;
+        }
+        group.appendChild(dotsRow);
+        dotsContainer.appendChild(group);
+    }
+
+    dotsRenderState = { mode: 'measure', key, dotEls, beatNumEls };
+
+    document.querySelectorAll('.measure-row').forEach((row, idx) => {
+        row.classList.toggle('current', idx === measureIndex);
+    });
+}
+
+function renderCountdownDots(activeSubBeatInBeat) {
+    const remainingBeats = COUNTDOWN_TOTAL - activeSubBeatInBeat;
+    currentMeasureBadge.innerText = `PRONTI... ${remainingBeats}`;
+    movementDisplay.innerHTML = `COUNTDOWN: <span class="highlight">${activeSubBeatInBeat + 1}</span> DI ${COUNTDOWN_TOTAL}`;
+
+    if (!dotsRenderState || dotsRenderState.mode !== 'countdown') {
+        dotsContainer.innerHTML = '';
         const wrapper = document.createElement('div');
         wrapper.className = 'countdown-wrapper';
+        const dotEls = [];
         for (let i = 0; i < COUNTDOWN_TOTAL; i++) {
             const dot = document.createElement('div');
-            dot.className = `dot downbeat ${i === activeSubBeatInBeat ? 'active' : ''}`;
+            dot.className = 'dot downbeat';
             wrapper.appendChild(dot);
+            dotEls.push(dot);
         }
         dotsContainer.appendChild(wrapper);
+        dotsRenderState = { mode: 'countdown', key: 'countdown', dotEls, beatNumEls: [] };
+    }
+
+    dotsRenderState.dotEls.forEach((dot, i) => {
+        dot.classList.toggle('active', i === activeSubBeatInBeat);
+    });
+}
+
+function renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode = false, currentRepeat = -1) {
+    if (isCountdownMode) {
+        renderCountdownDots(activeSubBeatInBeat);
         return;
     }
-    
+
     const config = measures[measureIndex];
     if (!config) return;
-    
+
     const totalSubs = config.beatSubs.reduce((a, b) => a + b, 0);
     if (!config.accents || config.accents.length !== totalSubs) {
         config.accents = new Array(totalSubs).fill(0);
     }
-    
+
     const maxRepeats = config.repeat || 1;
     let repeatText = '';
     if (maxRepeats === 'inf') {
@@ -995,65 +1126,23 @@ function renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMo
         const displayRepeat = currentRepeat >= 0 ? (currentRepeat + 1) : 1;
         repeatText = `(Ripeti ${displayRepeat}/${maxRepeats})`;
     }
-    
+
     currentMeasureBadge.innerText = `Battuta ${measureIndex + 1} di ${measures.length}${repeatText}`;
     const currBeat = activeBeat >= 0 ? activeBeat + 1 : 1;
     movementDisplay.innerHTML = `MOVIMENTO <span class="highlight">${currBeat}</span> DI ${config.beats}`;
-    
-    let globalSubBeatIndex = 0;
-    for (let b = 0; b < config.beats; b++) {
-        const group = document.createElement('div');
-        group.className = 'beat-group';
-        
-        const beatNumber = document.createElement('div');
-        beatNumber.className = 'beat-number';
-        beatNumber.textContent = b + 1;
-        if (b === activeBeat) beatNumber.classList.add('active-beat');
-        setupBeatLongPress(beatNumber, measureIndex, b);
-        group.appendChild(beatNumber);
-        
-        const dotsRow = document.createElement('div');
-        dotsRow.className = 'beat-dots-row';
-        
-        for (let s = 0; s < config.beatSubs[b]; s++) {
-            const dotIdx = globalSubBeatIndex;
-            const dot = document.createElement('div');
-            dot.className = 'dot';
-            if (s === 0) dot.classList.add('downbeat');
-            
-            const state = config.accents[dotIdx] || 0;
-            if (state === 1) dot.classList.add('state-accent');
-            if (state === 2) dot.classList.add('state-mute');
-            
-            dot.setAttribute('role', 'button');
-            dot.setAttribute('tabindex', '0');
-            const stateLabel = state === 1 ? 'accento' : state === 2 ? 'muto' : 'normale';
-            dot.setAttribute('aria-label', `Suddivisione ${dotIdx + 1}, stato ${stateLabel}`);
-            
-            const cycleState = () => {
-                config.accents[dotIdx] = (state + 1) % 3;
-                renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMode, currentRepeat);
-                savePersistedData();
-            };
-            
-            dot.addEventListener('click', cycleState);
-            dot.addEventListener('keydown', (e) => {
-                if (e.code === 'Enter' || e.code === 'Space') {
-                    e.preventDefault();
-                    cycleState();
-                }
-            });
-            
-            if (b === activeBeat && s === activeSubBeatInBeat) dot.classList.add('active');
-            dotsRow.appendChild(dot);
-            globalSubBeatIndex++;
-        }
-        group.appendChild(dotsRow);
-        dotsContainer.appendChild(group);
+
+    const key = 'm' + measureIndex + ':' + config.beatSubs.join(',');
+    if (!dotsRenderState || dotsRenderState.mode !== 'measure' || dotsRenderState.key !== key) {
+        buildMeasureDots(measureIndex, config, key);
     }
-    
-    document.querySelectorAll('.measure-row').forEach((row, idx) => {
-        row.classList.toggle('current', idx === measureIndex);
+
+    dotsRenderState.beatNumEls.forEach((el, b) => {
+        el.classList.toggle('active-beat', b === activeBeat);
+    });
+    dotsRenderState.dotEls.forEach((dot, idx) => {
+        applyDotAccentClass(dot, config.accents[idx] || 0);
+        const isActive = (parseInt(dot.dataset.beat, 10) === activeBeat && parseInt(dot.dataset.sub, 10) === activeSubBeatInBeat);
+        dot.classList.toggle('active', isActive);
     });
 }
 
@@ -1332,7 +1421,9 @@ soundWaveSelect.addEventListener('change', savePersistedData);
 metroVolInput.addEventListener('change', savePersistedData);
 
 document.addEventListener('click', (e) => {
-    if (activeSubPopup && !e.target.closest('.beat-sub-popup') && !e.target.closest('.beat-number')) {
+    if (activeSubPopup &&
+        !e.target.closest('.beat-sub-popup') && !e.target.closest('.beat-number') &&
+        !e.target.closest('.subdivision-popup') && !e.target.closest('.subdivision-current')) {
         closeBeatSubPopup();
     }
 });

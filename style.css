@@ -372,6 +372,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
     justify-content: center;
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
     width: 100%;
+    /* Isola gli aggiornamenti del visualizzatore (che cambia molte volte al
+       secondo durante la riproduzione) dal resto della pagina, cosi' non
+       provoca micro-scatti di layout che facevano "perdere" il tap sul
+       pulsante AVVIA/FERMA sottostante. */
+    contain: layout paint;
 }
 
 .measure-badge {
@@ -390,6 +395,14 @@ input[type="range"]::-webkit-slider-thumb:hover {
     align-items: center;
     width: 100%;
     padding: 0.2rem;
+    /* Limita l'altezza quando una battuta ha molti beat/suddivisioni (es. metri
+       personalizzati complessi): scrolla internamente invece di far crescere
+       il contenitore, cosi' i controlli sottostanti (incluso AVVIA/FERMA)
+       restano sempre nella stessa posizione durante la riproduzione. */
+    max-height: 168px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
 }
 
 .beat-group {
@@ -431,6 +444,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     -webkit-touch-callout: none;
     transition: all 0.15s ease;
     position: relative;
+    touch-action: manipulation;
 }
 
 .beat-number:hover {
@@ -490,6 +504,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     color: var(--text-main);
     transition: all 0.1s ease;
     white-space: nowrap;
+    touch-action: manipulation;
 }
 
 .sub-popup-option:hover {
@@ -511,6 +526,7 @@ input[type="range"]::-webkit-slider-thumb:hover {
     cursor: pointer;
     transition: transform 0.08s ease, background 0.08s ease, border-color 0.08s ease;
     position: relative;
+    touch-action: manipulation;
 }
 
 .dot.downbeat {
@@ -878,6 +894,7 @@ select:focus, select:hover {
     cursor: pointer;
     box-shadow: 0 4px 20px var(--accent-glow);
     transition: transform 0.05s ease, background 0.15s ease;
+    touch-action: manipulation;
 }
 
 .btn-play:active {
@@ -1119,6 +1136,7 @@ select:focus, select:hover {
     user-select: none;
     -webkit-user-select: none;
     white-space: nowrap;
+    touch-action: manipulation;
 }
 
 .subdivision-current:hover {

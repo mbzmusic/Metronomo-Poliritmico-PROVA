@@ -34,11 +34,7 @@ self.addEventListener('activate', (event) => {
 
 // Strategia: cache-first per l'app shell, con fallback di rete e aggiornamento in background.
 self.addEventListener('fetch', (event) => {
-  // Ignora richieste non GET o schemi non supportati (es. chrome-extension)
   if (event.request.method !== 'GET') return;
-  
-  const url = new URL(event.request.url);
-  if (!['http:', 'https:'].includes(url.protocol)) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
@@ -46,17 +42,12 @@ self.addEventListener('fetch', (event) => {
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              // Doppio controllo prima di mettere in cache
-              if (url.protocol === 'https:' || url.protocol === 'http:') {
-                cache.put(event.request, responseClone);
-              }
-            });
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }
           return networkResponse;
         })
         .catch(() => cachedResponse);
-      
+
       return cachedResponse || networkFetch;
     })
   );
