@@ -116,7 +116,10 @@
 
         <div class="setting-row">
             <label>Suono Suddivisioni:</label>
-            <select id="soundWaveSelect">
+            <div class="subdivision-selector">
+                <div class="subdivision-current" id="soundWaveTrigger" tabindex="0" role="button" aria-haspopup="true" aria-label="Suono Suddivisioni">Sinusoidale (Morbido)</div>
+            </div>
+            <select id="soundWaveSelect" class="native-select-hidden" aria-hidden="true" tabindex="-1">
                 <option value="sine">Sinusoidale (Morbido)</option>
                 <option value="triangle">Triangolare (Legnoso)</option>
                 <option value="square">Quadrata (8-bit)</option>

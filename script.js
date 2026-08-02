@@ -52,6 +52,7 @@ const masterValueText = document.getElementById('masterValueText');
 const valCircle = document.getElementById('valCircle');
 const metroVolInput = document.getElementById('metroVol');
 const soundWaveSelect = document.getElementById('soundWaveSelect');
+const soundWaveTrigger = document.getElementById('soundWaveTrigger');
 const tapTempoBtn = document.getElementById('tapTempoBtn');
 const customModal = document.getElementById('customModal');
 const customBeatsInput = document.getElementById('customBeatsInput');
@@ -117,6 +118,7 @@ function loadPersistedData() {
 
         const savedSound = localStorage.getItem('metronome_sound_v4');
         if (savedSound) soundWaveSelect.value = savedSound;
+        updateSoundWaveTriggerLabel();
 
         const savedMetroVol = localStorage.getItem('metronome_metrovol_v1');
         if (savedMetroVol) metroVolInput.value = savedMetroVol;
@@ -194,6 +196,7 @@ function applySequenceData(data) {
     if (typeof data.soundWave === 'string') {
         const opt = Array.from(soundWaveSelect.options).find(o => o.value === data.soundWave);
         if (opt) soundWaveSelect.value = data.soundWave;
+        updateSoundWaveTriggerLabel();
     }
 
     currentMeasureIndex = 0;
@@ -626,22 +629,17 @@ function renderMeasuresList() {
             selectMeasure(index);
         };
 
-        const repeatOptions = [1,2,3,4,5,6,7,8,9,10].map(r => `<option value="${r}" ${m.repeat === r ? 'selected' : ''}>×${r}</option>`).join('') + `<option value="inf" ${m.repeat === 'inf' ? 'selected' : ''}>Loop</option>`;
-        
-        const customLabel = m.isCustom ? `${m.beats}/${m.sub}` : 'Custom...';
+        const presetInfo = getPresetInfo(m);
+        const repeatLabel = m.repeat === 'inf' ? 'Loop' : `×${m.repeat}`;
 
         row.innerHTML = `
             <div class="measure-left">
                 <div class="measure-number">${index + 1}</div>
-                <select class="measure-select preset" onchange="handlePresetSelect(${index}, this.value)" onclick="handlePresetClick(${index}, this)" aria-label="Metro">
-                    <option value="4/4" ${!m.isCustom && m.beats === 4 && m.sub !== 3 ? 'selected' : ''}>4/4</option>
-                    <option value="2/4" ${!m.isCustom && m.beats === 2 && m.sub !== 3 ? 'selected' : ''}>2/4</option>
-                    <option value="3/4" ${!m.isCustom && m.beats === 3 && m.sub !== 3 ? 'selected' : ''}>3/4</option>
-                    <option value="6/8" ${!m.isCustom && m.beats === 2 && m.sub === 3 ? 'selected' : ''}>6/8</option>
-                    <option value="7/8" ${!m.isCustom && m.beats === 7 && m.sub === 2 ? 'selected' : ''}>7/8</option>
-                    <option value="12/8" ${!m.isCustom && m.beats === 4 && m.sub === 3 ? 'selected' : ''}>12/8</option>
-                    <option value="custom" ${m.isCustom ? 'selected' : ''}>${customLabel}</option>
-                </select>
+                <div class="subdivision-selector">
+                    <div class="subdivision-current" tabindex="0" role="button" aria-haspopup="true" aria-label="Metro: ${presetInfo.label}"
+                        onclick="event.stopPropagation(); window.togglePresetPopup(${index}, this)"
+                        onkeydown="if(event.code==='Enter'||event.code==='Space'){event.preventDefault();event.stopPropagation();window.togglePresetPopup(${index}, this)}">${presetInfo.label}</div>
+                </div>
                 ${m.isCustom ? `
                     <button type="button" class="icon-btn edit-btn" onclick="openCustomModal(${index})" title="Modifica Metro Custom">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -652,9 +650,11 @@ function renderMeasuresList() {
                         onclick="event.stopPropagation(); window.toggleMeasureSubPopup(${index}, this)"
                         onkeydown="if(event.code==='Enter'||event.code==='Space'){event.preventDefault();event.stopPropagation();window.toggleMeasureSubPopup(${index}, this)}">${SUB_NAMES[m.sub] || 'Crome'}</div>
                 </div>
-                <select class="measure-select repeat" onchange="updateMeasure(${index}, 'repeat', this.value)" aria-label="Ripetizioni">
-                    ${repeatOptions}
-                </select>
+                <div class="subdivision-selector">
+                    <div class="subdivision-current" tabindex="0" role="button" aria-haspopup="true" aria-label="Ripetizioni: ${repeatLabel}"
+                        onclick="event.stopPropagation(); window.toggleRepeatPopup(${index}, this)"
+                        onkeydown="if(event.code==='Enter'||event.code==='Space'){event.preventDefault();event.stopPropagation();window.toggleRepeatPopup(${index}, this)}">${repeatLabel}</div>
+                </div>
             </div>
             <div class="measure-right">
                 <button type="button" class="icon-btn ${isFirst ? 'disabled' : ''}" 
@@ -681,20 +681,6 @@ function renderMeasuresList() {
     });
     savePersistedData();
 }
-
-window.handlePresetSelect = function(index, value) {
-    if (value === 'custom') {
-        openCustomModal(index);
-    } else {
-        updateMeasure(index, 'preset', value);
-    }
-};
-
-window.handlePresetClick = function(index, selectElem) {
-    if (selectElem.value === 'custom' && measures[index].isCustom) {
-        openCustomModal(index);
-    }
-};
 
 function openCustomModal(index) {
     targetCustomIndex = index;
@@ -906,43 +892,132 @@ function showBeatSubPopup(beatNumberElem, measureIndex, beatIndex) {
     });
 }
 
-// Stesso meccanismo di showBeatSubPopup, ma per il selettore "Suddivisione"
-// nella sezione Sequenza Battute: un menu a comparsa personalizzato identico
-// nello stile a quello dei pallini numerati, al posto del <select> nativo.
-function showMeasureSubPopup(triggerElem, index) {
+// Meccanismo generico usato da TUTTI i menu a tendina dell'app (Suddivisione,
+// Metro, Ripetizioni, Suono Suddivisioni): un menu a comparsa personalizzato
+// identico nello stile a quello dei pallini numerati, al posto del <select>
+// nativo. optionsList è un array di {value, label}; onPick(value) viene
+// chiamata alla scelta di un'opzione.
+function showSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPick) {
     closeBeatSubPopup();
-    
-    const m = measures[index];
+
     const popup = document.createElement('div');
     popup.className = 'subdivision-popup';
-    
-    for (let i = 1; i <= 6; i++) {
-        const opt = document.createElement('div');
-        opt.className = 'sub-popup-option' + (i === m.sub ? ' selected' : '');
-        opt.textContent = SUB_NAMES[i];
-        opt.addEventListener('click', (e) => {
+
+    optionsList.forEach(opt => {
+        const el = document.createElement('div');
+        el.className = 'sub-popup-option' + (opt.value === selectedValue ? ' selected' : '');
+        el.textContent = opt.label;
+        el.addEventListener('click', (e) => {
             e.stopPropagation();
-            updateMeasure(index, 'sub', String(i));
             closeBeatSubPopup();
+            onPick(opt.value);
         });
-        popup.appendChild(opt);
-    }
-    
+        popup.appendChild(el);
+    });
+
     triggerElem.parentElement.appendChild(popup);
     activeSubPopup = popup;
-    
+
     requestAnimationFrame(() => {
         popup.classList.add('active');
     });
 }
 
-window.toggleMeasureSubPopup = function(index, triggerElem) {
+function toggleSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPick) {
     const wasOpenForThis = activeSubPopup && triggerElem.parentElement.contains(activeSubPopup);
     closeBeatSubPopup();
     if (!wasOpenForThis) {
-        showMeasureSubPopup(triggerElem, index);
+        showSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPick);
     }
+}
+
+window.toggleMeasureSubPopup = function(index, triggerElem) {
+    const m = measures[index];
+    const options = [];
+    for (let i = 1; i <= 6; i++) options.push({ value: String(i), label: SUB_NAMES[i] });
+    toggleSubdivisionStylePopup(triggerElem, options, String(m.sub), (value) => {
+        updateMeasure(index, 'sub', value);
+    });
 };
+
+// Ricava valore/etichetta del Metro corrente di una battuta, con la stessa
+// logica usata in precedenza dagli <option selected> del <select> nativo.
+function getPresetInfo(m) {
+    if (!m.isCustom) {
+        if (m.beats === 4 && m.sub !== 3) return { value: '4/4', label: '4/4' };
+        if (m.beats === 2 && m.sub !== 3) return { value: '2/4', label: '2/4' };
+        if (m.beats === 3 && m.sub !== 3) return { value: '3/4', label: '3/4' };
+        if (m.beats === 2 && m.sub === 3) return { value: '6/8', label: '6/8' };
+        if (m.beats === 7 && m.sub === 2) return { value: '7/8', label: '7/8' };
+        if (m.beats === 4 && m.sub === 3) return { value: '12/8', label: '12/8' };
+    }
+    return { value: 'custom', label: m.isCustom ? `${m.beats}/${m.sub}` : 'Custom...' };
+}
+
+window.togglePresetPopup = function(index, triggerElem) {
+    const m = measures[index];
+    const current = getPresetInfo(m);
+    const options = [
+        { value: '4/4', label: '4/4' },
+        { value: '2/4', label: '2/4' },
+        { value: '3/4', label: '3/4' },
+        { value: '6/8', label: '6/8' },
+        { value: '7/8', label: '7/8' },
+        { value: '12/8', label: '12/8' },
+        { value: 'custom', label: current.value === 'custom' ? current.label : 'Custom...' }
+    ];
+    toggleSubdivisionStylePopup(triggerElem, options, current.value, (value) => {
+        if (value === 'custom') {
+            openCustomModal(index);
+        } else {
+            updateMeasure(index, 'preset', value);
+        }
+    });
+};
+
+window.toggleRepeatPopup = function(index, triggerElem) {
+    const m = measures[index];
+    const options = [1,2,3,4,5,6,7,8,9,10].map(r => ({ value: String(r), label: `×${r}` }));
+    options.push({ value: 'inf', label: 'Loop' });
+    toggleSubdivisionStylePopup(triggerElem, options, String(m.repeat), (value) => {
+        updateMeasure(index, 'repeat', value);
+    });
+};
+
+// Il <select id="soundWaveSelect"> nativo resta nel DOM (nascosto) come unica
+// fonte di verità per il valore scelto, così tutto il codice di salvataggio/
+// export/import continua a funzionare invariato; il trigger sostituisce solo
+// la parte visiva con lo stesso stile a comparsa dei pallini numerati.
+function getSoundWaveOptions() {
+    return Array.from(soundWaveSelect.options).map(o => ({ value: o.value, label: o.textContent }));
+}
+
+function updateSoundWaveTriggerLabel() {
+    const opt = Array.from(soundWaveSelect.options).find(o => o.value === soundWaveSelect.value);
+    if (soundWaveTrigger) soundWaveTrigger.textContent = opt ? opt.textContent : '';
+}
+
+function toggleSoundWavePopup(triggerElem) {
+    toggleSubdivisionStylePopup(triggerElem, getSoundWaveOptions(), soundWaveSelect.value, (value) => {
+        soundWaveSelect.value = value;
+        updateSoundWaveTriggerLabel();
+        soundWaveSelect.dispatchEvent(new Event('change'));
+    });
+}
+
+if (soundWaveTrigger) {
+    soundWaveTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleSoundWavePopup(soundWaveTrigger);
+    });
+    soundWaveTrigger.addEventListener('keydown', (e) => {
+        if (e.code === 'Enter' || e.code === 'Space') {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleSoundWavePopup(soundWaveTrigger);
+        }
+    });
+}
 
 function setupBeatLongPress(elem, measureIndex, beatIndex) {
     let timer = null;
@@ -1430,6 +1505,7 @@ document.addEventListener('click', (e) => {
 
 setValidBpm(bpm);
 updateMasterKnobUI(masterVolume);
+updateSoundWaveTriggerLabel();
 renderMeasuresList();
 renderDots(0, -1, -1);
 swingValueText.innerText = `${swingAmount.value}%`;
