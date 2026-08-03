@@ -1414,3 +1414,92 @@ select:focus, select:hover {
         font-size: 0.6rem;
     }
 }
+/* --- Poliritmia: tab switcher --- */
+.mode-tabs {
+    display: flex;
+    background: var(--panel-inner);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 4px;
+}
+
+.mode-tab {
+    flex: 1;
+    font-family: 'Inter', sans-serif;
+    background: transparent;
+    border: none;
+    padding: 0.65rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mode-tab:hover {
+    color: var(--text-main);
+}
+
+.mode-tab.active {
+    background: var(--card-bg);
+    color: var(--accent-yellow);
+    box-shadow: 0 0 14px var(--accent-glow), inset 0 1px 1px rgba(255,255,255,0.05);
+}
+
+.view-metronomo {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.view-poliritmia {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+}
+
+.poliritmia-placeholder {
+    text-align: center;
+    padding: 2rem 1rem;
+    max-width: 380px;
+}
+
+.poliritmia-icon {
+    font-size: 2.4rem;
+    color: var(--accent-yellow);
+    text-shadow: 0 0 15px var(--accent-glow);
+    margin-bottom: 0.75rem;
+}
+
+.poliritmia-placeholder h2 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-main);
+}
+
+.poliritmia-placeholder p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin: 0 0 1rem 0;
+}
+
+.poliritmia-soon {
+    display: inline-block;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent-orange);
+    background: rgba(251, 146, 60, 0.12);
+    border: 1px solid rgba(251, 146, 60, 0.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+}

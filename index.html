@@ -36,6 +36,13 @@
         </div>
     </header>
 
+    <div class="mode-tabs" role="tablist" aria-label="Modalità app">
+        <button class="mode-tab active" id="tabMetronomo" role="tab" aria-selected="true" type="button">Metronomo</button>
+        <button class="mode-tab" id="tabPoliritmia" role="tab" aria-selected="false" type="button">Poliritmia</button>
+    </div>
+
+    <div class="view-metronomo" id="viewMetronomo">
+
     <div class="bpm-display">
         <div class="bpm-row-top">
             <button class="btn-bpm-step" id="bpmMinus1">−</button>
@@ -168,7 +175,17 @@
         <button id="playBtn" class="btn-play">AVVIA</button>
         <div class="shortcut-hint">SPAZIO: AVVIO/STOP · ↑↓ TEMPO (SHIFT = ±5)</div>
     </div>
-    
+
+    </div>
+
+    <div class="view-poliritmia" id="viewPoliritmia" style="display:none;">
+        <div class="poliritmia-placeholder">
+            <div class="poliritmia-icon">◫</div>
+            <h2>Poliritmia</h2>
+            <p>Qui potrai sovrapporre più suddivisioni ritmiche indipendenti, ognuna con il proprio time signature personalizzato.</p>
+            <span class="poliritmia-soon">Sezione in costruzione</span>
+        </div>
+    </div>
 
 </div>
 

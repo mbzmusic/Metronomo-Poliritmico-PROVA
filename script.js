@@ -1636,3 +1636,33 @@ loadPresets();
 renderPresetsList();
 loadStats();
 checkSharedLinkOnLoad();
+// --- Poliritmia: gestione tab (solo anteprima UI, nessuna logica su questa vista) ---
+document.addEventListener('DOMContentLoaded', () => {
+    const tabMetronomo = document.getElementById('tabMetronomo');
+    const tabPoliritmia = document.getElementById('tabPoliritmia');
+    const viewMetronomo = document.getElementById('viewMetronomo');
+    const viewPoliritmia = document.getElementById('viewPoliritmia');
+
+    if (!tabMetronomo || !tabPoliritmia) return;
+
+    function showMetronomo() {
+        tabMetronomo.classList.add('active');
+        tabPoliritmia.classList.remove('active');
+        tabMetronomo.setAttribute('aria-selected', 'true');
+        tabPoliritmia.setAttribute('aria-selected', 'false');
+        viewMetronomo.style.display = 'flex';
+        viewPoliritmia.style.display = 'none';
+    }
+
+    function showPoliritmia() {
+        tabPoliritmia.classList.add('active');
+        tabMetronomo.classList.remove('active');
+        tabPoliritmia.setAttribute('aria-selected', 'true');
+        tabMetronomo.setAttribute('aria-selected', 'false');
+        viewPoliritmia.style.display = 'flex';
+        viewMetronomo.style.display = 'none';
+    }
+
+    tabMetronomo.addEventListener('click', showMetronomo);
+    tabPoliritmia.addEventListener('click', showPoliritmia);
+});
