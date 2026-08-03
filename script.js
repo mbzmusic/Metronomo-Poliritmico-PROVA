@@ -1560,6 +1560,10 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function togglePlayback() {
+    if (typeof activeMode !== 'undefined' && activeMode === 'poliritmia') {
+        togglePoliPlayback();
+        return;
+    }
     initAudioContext();
     isPlaying = !isPlaying;
     
@@ -1636,33 +1640,329 @@ loadPresets();
 renderPresetsList();
 loadStats();
 checkSharedLinkOnLoad();
-// --- Poliritmia: gestione tab (solo anteprima UI, nessuna logica su questa vista) ---
-document.addEventListener('DOMContentLoaded', () => {
-    const tabMetronomo = document.getElementById('tabMetronomo');
-    const tabPoliritmia = document.getElementById('tabPoliritmia');
-    const viewMetronomo = document.getElementById('viewMetronomo');
-    const viewPoliritmia = document.getElementById('viewPoliritmia');
+/* =========================================================
+   POLIRITMIA
+   Modulo indipendente: riusa audioCtx/masterGainNode del
+   metronomo principale ma ha un proprio scheduler, dato che
+   ogni livello ha una propria suddivisione all'interno dello
+   stesso ciclo condiviso (stesso BPM, stessa durata di ciclo).
+   ========================================================= */
 
-    if (!tabMetronomo || !tabPoliritmia) return;
+let activeMode = 'metronomo';
 
-    function showMetronomo() {
-        tabMetronomo.classList.add('active');
-        tabPoliritmia.classList.remove('active');
-        tabMetronomo.setAttribute('aria-selected', 'true');
-        tabPoliritmia.setAttribute('aria-selected', 'false');
-        viewMetronomo.style.display = 'flex';
-        viewPoliritmia.style.display = 'none';
+const POLI_COLORS = ['#facc15', '#fb923c', '#38bdf8', '#4ade80', '#f472b6', '#a78bfa'];
+
+let poliLayers = [];
+let poliViewMode = 'linear';
+let isPoliPlaying = false;
+let poliTimerID = null;
+let poliUiTimerID = null;
+let poliUiEvents = [];
+let poliNextTimes = [];
+let poliCycleStartTime = 0;
+let poliCycleDuration = 2.0;
+let poliRafID = null;
+
+const tabMetronomoBtn = document.getElementById('tabMetronomo');
+const tabPoliritmiaBtn = document.getElementById('tabPoliritmia');
+const viewMetronomoEl = document.getElementById('viewMetronomo');
+const viewPoliritmiaEl = document.getElementById('viewPoliritmia');
+const poliCycleBeatsInput = document.getElementById('poliCycleBeats');
+const poliRowsContainer = document.getElementById('poliRowsContainer');
+const poliLayersContainer = document.getElementById('poliLayersContainer');
+const poliAddLayerBtn = document.getElementById('poliAddLayerBtn');
+const poliPlayhead = document.getElementById('poliPlayhead');
+const poliLinearView = document.getElementById('poliLinearView');
+const poliRadialView = document.getElementById('poliRadialView');
+const poliViewLinearBtn = document.getElementById('poliViewLinearBtn');
+const poliViewRadialBtn = document.getElementById('poliViewRadialBtn');
+const poliRadialSvg = document.getElementById('poliRadialSvg');
+const poliNeedle = document.getElementById('poliNeedle');
+const poliLayerModal = document.getElementById('poliLayerModal');
+const poliLayerBeatsInput = document.getElementById('poliLayerBeatsInput');
+const poliLayerModalCancel = document.getElementById('poliLayerModalCancel');
+const poliLayerModalSave = document.getElementById('poliLayerModalSave');
+
+function loadPoliData() {
+    try {
+        const savedLayers = localStorage.getItem('metronome_poli_layers_v1');
+        if (savedLayers) {
+            const parsed = JSON.parse(savedLayers);
+            if (Array.isArray(parsed) && parsed.length > 0) poliLayers = parsed;
+        }
+        if (poliLayers.length === 0) {
+            poliLayers = [
+                { beats: 3, muted: false },
+                { beats: 4, muted: false },
+                { beats: 5, muted: false }
+            ];
+        }
+        const savedCycle = localStorage.getItem('metronome_poli_cyclebeats_v1');
+        if (savedCycle) poliCycleBeatsInput.value = savedCycle;
+        const savedView = localStorage.getItem('metronome_poli_viewmode_v1');
+        if (savedView === 'radial' || savedView === 'linear') poliViewMode = savedView;
+    } catch (e) {
+        console.error('Errore nel caricamento dati Poliritmia', e);
+        poliLayers = [{ beats: 3, muted: false }, { beats: 4, muted: false }, { beats: 5, muted: false }];
     }
+}
 
-    function showPoliritmia() {
-        tabPoliritmia.classList.add('active');
-        tabMetronomo.classList.remove('active');
-        tabPoliritmia.setAttribute('aria-selected', 'true');
-        tabMetronomo.setAttribute('aria-selected', 'false');
-        viewPoliritmia.style.display = 'flex';
-        viewMetronomo.style.display = 'none';
+function savePoliData() {
+    try {
+        localStorage.setItem('metronome_poli_layers_v1', JSON.stringify(poliLayers));
+        localStorage.setItem('metronome_poli_cyclebeats_v1', poliCycleBeatsInput.value);
+        localStorage.setItem('metronome_poli_viewmode_v1', poliViewMode);
+    } catch (e) {
+        console.error('Errore nel salvataggio dati Poliritmia', e);
     }
+}
 
-    tabMetronomo.addEventListener('click', showMetronomo);
-    tabPoliritmia.addEventListener('click', showPoliritmia);
+function getPoliCycleDuration() {
+    const cycleBeats = Math.max(1, parseInt(poliCycleBeatsInput.value, 10) || 4);
+    return (60 / bpm) * cycleBeats;
+}
+
+function renderPoliLayersList() {
+    poliLayersContainer.innerHTML = '';
+    if (poliLayers.length === 0) {
+        poliLayersContainer.innerHTML = '<div class="presets-empty">Nessun livello. Aggiungine uno per iniziare.</div>';
+        return;
+    }
+    poliLayers.forEach((layer, index) => {
+        const color = POLI_COLORS[index % POLI_COLORS.length];
+        const row = document.createElement('div');
+        row.className = 'poli-layer-row';
+        row.innerHTML = `
+            <span class="poli-layer-color" style="background:${color};"></span>
+            <span class="poli-layer-label">Livello ${index + 1} · ${layer.beats} suddivisioni</span>
+            <div class="poli-layer-actions">
+                <button type="button" class="icon-btn ${layer.muted ? 'muted' : ''}" data-action="mute" data-index="${index}" title="Muto" aria-label="Muto">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>${layer.muted ? '<line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>' : '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>'}</svg>
+                </button>
+                <button type="button" class="icon-btn" data-action="delete" data-index="${index}" title="Elimina" aria-label="Elimina">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            </div>
+        `;
+        poliLayersContainer.appendChild(row);
+    });
+}
+
+function renderPoliRows() {
+    poliRowsContainer.innerHTML = '';
+    poliLayers.forEach((layer, index) => {
+        const color = POLI_COLORS[index % POLI_COLORS.length];
+        const row = document.createElement('div');
+        row.className = 'poli-row';
+        const dotsHtml = Array.from({ length: layer.beats }).map((_, i) => `
+            <div class="poli-dot-col">
+                <span class="poli-dot" data-layer="${index}" data-dot="${i}" style="background:${layer.muted ? '#3f3f46' : color}; color:${color};"></span>
+                <span class="poli-dot-num">${i + 1}</span>
+            </div>
+        `).join('');
+        row.innerHTML = `
+            <span class="poli-row-label" style="color:${layer.muted ? 'var(--text-muted)' : color};">${layer.beats} suddiv.</span>
+            <div class="poli-row-dots">${dotsHtml}</div>
+        `;
+        poliRowsContainer.appendChild(row);
+    });
+}
+
+function renderPoliRadial() {
+    while (poliRadialSvg.firstChild && poliRadialSvg.firstChild.id !== 'poliNeedle') {
+        poliRadialSvg.removeChild(poliRadialSvg.firstChild);
+    }
+    const baseRadius = 40;
+    const step = poliLayers.length > 0 ? (130 - baseRadius) / poliLayers.length : 0;
+    poliLayers.forEach((layer, index) => {
+        const r = baseRadius + step * (index + 1);
+        const color = layer.muted ? '#3f3f46' : POLI_COLORS[index % POLI_COLORS.length];
+        const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        ring.setAttribute('cx', 150); ring.setAttribute('cy', 150); ring.setAttribute('r', r);
+        ring.setAttribute('fill', 'none'); ring.setAttribute('stroke', '#1c1c22'); ring.setAttribute('stroke-width', 1);
+        poliRadialSvg.insertBefore(ring, poliNeedle);
+        for (let i = 0; i < layer.beats; i++) {
+            const a = (i / layer.beats) * 2 * Math.PI - Math.PI / 2;
+            const cx = 150 + r * Math.cos(a);
+            const cy = 150 + r * Math.sin(a);
+            const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            dot.setAttribute('cx', cx); dot.setAttribute('cy', cy); dot.setAttribute('r', 6);
+            dot.setAttribute('fill', color);
+            dot.setAttribute('data-layer', index); dot.setAttribute('data-dot', i);
+            dot.setAttribute('class', 'poli-radial-dot');
+            poliRadialSvg.insertBefore(dot, poliNeedle);
+            const textR = r + 13;
+            const tx = 150 + textR * Math.cos(a);
+            const ty = 150 + textR * Math.sin(a);
+            const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            label.setAttribute('x', tx); label.setAttribute('y', ty);
+            label.setAttribute('text-anchor', 'middle'); label.setAttribute('dominant-baseline', 'middle');
+            label.setAttribute('font-size', '10'); label.setAttribute('font-weight', '800');
+            label.setAttribute('fill', color);
+            label.textContent = i + 1;
+            poliRadialSvg.insertBefore(label, poliNeedle);
+        }
+    });
+    poliNeedle.setAttribute('y2', 150 - (baseRadius + step * poliLayers.length + 15));
+}
+
+function renderPoliAll() {
+    renderPoliLayersList();
+    renderPoliRows();
+    renderPoliRadial();
+}
+
+function setPoliViewMode(mode) {
+    poliViewMode = mode;
+    poliLinearView.style.display = mode === 'linear' ? 'block' : 'none';
+    poliRadialView.style.display = mode === 'radial' ? 'flex' : 'none';
+    poliViewLinearBtn.classList.toggle('active', mode === 'linear');
+    poliViewRadialBtn.classList.toggle('active', mode === 'radial');
+    savePoliData();
+}
+
+poliViewLinearBtn.addEventListener('click', () => setPoliViewMode('linear'));
+poliViewRadialBtn.addEventListener('click', () => setPoliViewMode('radial'));
+
+poliLayersContainer.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const index = parseInt(btn.getAttribute('data-index'), 10);
+    const action = btn.getAttribute('data-action');
+    if (action === 'mute') {
+        poliLayers[index].muted = !poliLayers[index].muted;
+    } else if (action === 'delete') {
+        poliLayers.splice(index, 1);
+    }
+    savePoliData();
+    renderPoliAll();
 });
+
+poliAddLayerBtn.addEventListener('click', () => {
+    poliLayerBeatsInput.value = 4;
+    poliLayerModal.classList.add('active');
+});
+
+poliLayerModalCancel.addEventListener('click', () => poliLayerModal.classList.remove('active'));
+
+poliLayerModalSave.addEventListener('click', () => {
+    const beats = Math.min(32, Math.max(1, parseInt(poliLayerBeatsInput.value, 10) || 4));
+    poliLayers.push({ beats: beats, muted: false });
+    poliLayerModal.classList.remove('active');
+    savePoliData();
+    renderPoliAll();
+});
+
+poliCycleBeatsInput.addEventListener('change', () => {
+    poliCycleBeatsInput.value = Math.min(16, Math.max(1, parseInt(poliCycleBeatsInput.value, 10) || 4));
+    savePoliData();
+});
+
+function playPoliClick(time, layerIndex) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    gainNode.connect(masterGainNode);
+    const vol = parseFloat(metroVolInput.value);
+    const freq = 500 + layerIndex * 140;
+    const waveTypes = ['sine', 'triangle', 'square', 'sawtooth'];
+    osc.type = waveTypes[layerIndex % waveTypes.length];
+    osc.frequency.setValueAtTime(freq, time);
+    gainNode.gain.setValueAtTime(0.55 * vol, time);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
+    osc.connect(gainNode);
+    osc.start(time);
+    osc.stop(time + 0.06);
+}
+
+function poliScheduler() {
+    while (poliNextTimes.some((t, i) => t < audioCtx.currentTime + scheduleAheadTime)) {
+        let scheduledAny = false;
+        poliLayers.forEach((layer, i) => {
+            if (poliNextTimes[i] === undefined) return;
+            if (poliNextTimes[i] < audioCtx.currentTime + scheduleAheadTime) {
+                const dotIndex = Math.round(((poliNextTimes[i] - poliCycleStartTime) / poliCycleDuration) * layer.beats) % layer.beats;
+                if (!layer.muted) playPoliClick(poliNextTimes[i], i);
+                poliUiEvents.push({ time: poliNextTimes[i], layerIndex: i, dotIndex: dotIndex });
+                poliNextTimes[i] += poliCycleDuration / layer.beats;
+                scheduledAny = true;
+            }
+        });
+        if (!scheduledAny) break;
+    }
+    poliTimerID = setTimeout(poliScheduler, lookahead);
+}
+
+function updatePoliUI() {
+    if (!isPoliPlaying || !audioCtx) return;
+    const now = audioCtx.currentTime;
+    const dueEvents = poliUiEvents.filter(ev => ev.time <= now);
+    dueEvents.forEach(ev => {
+        const linearDot = poliRowsContainer.querySelector(`.poli-dot[data-layer="${ev.layerIndex}"][data-dot="${ev.dotIndex}"]`);
+        const radialDot = poliRadialSvg.querySelector(`.poli-radial-dot[data-layer="${ev.layerIndex}"][data-dot="${ev.dotIndex}"]`);
+        [linearDot, radialDot].forEach(el => {
+            if (!el) return;
+            el.classList.add('on');
+            setTimeout(() => el.classList.remove('on'), 110);
+        });
+    });
+    poliUiEvents = poliUiEvents.filter(ev => ev.time > now);
+}
+
+function poliAnimationLoop() {
+    if (!isPoliPlaying || !audioCtx) return;
+    const elapsed = (audioCtx.currentTime - poliCycleStartTime) % poliCycleDuration;
+    const progress = elapsed / poliCycleDuration;
+    poliPlayhead.style.left = (progress * poliLinearView.clientWidth) + 'px';
+    poliNeedle.setAttribute('transform', `rotate(${progress * 360} 150 150)`);
+    poliRafID = requestAnimationFrame(poliAnimationLoop);
+}
+
+function togglePoliPlayback() {
+    initAudioContext();
+    isPoliPlaying = !isPoliPlaying;
+
+    if (isPoliPlaying) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        requestWakeLock();
+        poliCycleDuration = getPoliCycleDuration();
+        poliCycleStartTime = audioCtx.currentTime + 0.05;
+        poliNextTimes = poliLayers.map(() => poliCycleStartTime);
+        poliUiEvents = [];
+        playBtn.innerText = 'FERMA';
+        playBtn.classList.add('playing');
+        poliPlayhead.classList.add('visible');
+        poliScheduler();
+        poliUiTimerID = setInterval(updatePoliUI, 25);
+        poliRafID = requestAnimationFrame(poliAnimationLoop);
+    } else {
+        clearTimeout(poliTimerID);
+        clearInterval(poliUiTimerID);
+        cancelAnimationFrame(poliRafID);
+        poliUiEvents = [];
+        playBtn.innerText = 'AVVIA';
+        playBtn.classList.remove('playing');
+        poliPlayhead.classList.remove('visible');
+        poliPlayhead.style.left = '0px';
+        releaseWakeLock();
+    }
+}
+
+function setActiveMode(mode) {
+    if (isPlaying) togglePlayback();
+    if (isPoliPlaying) togglePoliPlayback();
+    activeMode = mode;
+    viewMetronomoEl.style.display = mode === 'metronomo' ? 'flex' : 'none';
+    viewPoliritmiaEl.style.display = mode === 'poliritmia' ? 'flex' : 'none';
+    tabMetronomoBtn.classList.toggle('active', mode === 'metronomo');
+    tabPoliritmiaBtn.classList.toggle('active', mode === 'poliritmia');
+    tabMetronomoBtn.setAttribute('aria-selected', mode === 'metronomo' ? 'true' : 'false');
+    tabPoliritmiaBtn.setAttribute('aria-selected', mode === 'poliritmia' ? 'true' : 'false');
+}
+
+tabMetronomoBtn.addEventListener('click', () => setActiveMode('metronomo'));
+tabPoliritmiaBtn.addEventListener('click', () => setActiveMode('poliritmia'));
+
+loadPoliData();
+renderPoliAll();
+setPoliViewMode(poliViewMode);

@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Metronomo Poliritmico - Marco Bozzo</title>
-    <link rel="manifest" href="manifest.json?v=5">
-    <link rel="stylesheet" href="style.css?v=5">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=5">
-    <link rel="apple-touch-icon" href="icon-192.png?v=5">
+    <link rel="manifest" href="manifest.json?v=6">
+    <link rel="stylesheet" href="style.css?v=6">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=6">
+    <link rel="apple-touch-icon" href="icon-192.png?v=6">
     <meta name="theme-color" content="#0e0e11">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -41,8 +41,6 @@
         <button class="mode-tab" id="tabPoliritmia" role="tab" aria-selected="false" type="button">Poliritmia</button>
     </div>
 
-    <div class="view-metronomo" id="viewMetronomo">
-
     <div class="bpm-display">
         <div class="bpm-row-top">
             <button class="btn-bpm-step" id="bpmMinus1">−</button>
@@ -65,6 +63,8 @@
             <button class="btn-bpm-step" id="bpmPlus5">+5</button>
         </div>
     </div>
+
+    <div class="view-metronomo" id="viewMetronomo">
 
     <div class="visualizer">
         <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
@@ -171,21 +171,49 @@
         <button id="addMeasureBtn" class="btn-add">+ AGGIUNGI BATTUTA</button>
     </div>
 
+    </div>
+
+    <div class="view-poliritmia" id="viewPoliritmia" style="display:none;">
+
+        <div class="poli-view-toggle">
+            <button type="button" id="poliViewLinearBtn" class="poli-view-btn active" title="Vista a righi" aria-label="Vista a righi">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
+            </button>
+            <button type="button" id="poliViewRadialBtn" class="poli-view-btn" title="Vista radiale" aria-label="Vista radiale">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle></svg>
+            </button>
+        </div>
+
+        <div class="poli-linear-view" id="poliLinearView">
+            <div class="poli-playhead" id="poliPlayhead"></div>
+            <div id="poliRowsContainer"></div>
+        </div>
+
+        <div class="poli-radial-view" id="poliRadialView" style="display:none;">
+            <svg viewBox="0 0 300 300" id="poliRadialSvg" role="img" aria-label="Vista radiale dei livelli poliritmici">
+                <line id="poliNeedle" x1="150" y1="150" x2="150" y2="20" class="poli-needle"></line>
+                <circle cx="150" cy="150" r="5" class="poli-needle-hub"></circle>
+            </svg>
+        </div>
+
+        <div class="setting-row">
+            <label>Durata ciclo (battiti):</label>
+            <input type="number" id="poliCycleBeats" value="4" min="1" max="16" style="width:70px; background:var(--panel-inner); border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:4px 8px; text-align:center;">
+        </div>
+
+        <div class="section-title-bar">
+            <h2>Livelli Ritmici</h2>
+        </div>
+        <div class="poli-layers-list" id="poliLayersContainer"></div>
+        <button id="poliAddLayerBtn" class="btn-add">+ AGGIUNGI LIVELLO</button>
+
+    </div>
+
     <div class="controls">
         <button id="playBtn" class="btn-play">AVVIA</button>
         <div class="shortcut-hint">SPAZIO: AVVIO/STOP · ↑↓ TEMPO (SHIFT = ±5)</div>
     </div>
-
-    </div>
-
-    <div class="view-poliritmia" id="viewPoliritmia" style="display:none;">
-        <div class="poliritmia-placeholder">
-            <div class="poliritmia-icon">◫</div>
-            <h2>Poliritmia</h2>
-            <p>Qui potrai sovrapporre più suddivisioni ritmiche indipendenti, ognuna con il proprio time signature personalizzato.</p>
-            <span class="poliritmia-soon">Sezione in costruzione</span>
-        </div>
-    </div>
+    
 
 </div>
 
@@ -224,6 +252,23 @@
         <div class="modal-buttons">
             <button class="btn-modal-cancel" id="customRepeatModalCancel">Annulla</button>
             <button class="btn-modal-save" id="customRepeatModalSave">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL LIVELLO POLIRITMIA -->
+<div class="custom-modal-overlay" id="poliLayerModal">
+    <div class="custom-modal-box">
+        <div class="modal-title">Livello Poliritmico</div>
+        <div class="modal-inputs-row">
+            <div class="modal-field">
+                <label>Suddivisioni per ciclo</label>
+                <input type="number" id="poliLayerBeatsInput" min="1" max="32" value="3">
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-modal-cancel" id="poliLayerModalCancel">Annulla</button>
+            <button class="btn-modal-save" id="poliLayerModalSave">OK</button>
         </div>
     </div>
 </div>
@@ -269,6 +314,6 @@
     </div>
 </div>
 
-<script src="script.js?v=5"></script>
+<script src="script.js?v=6"></script>
 </body>
 </html>
