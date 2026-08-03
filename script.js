@@ -1014,7 +1014,7 @@ function toggleSubdivisionStylePopup(triggerElem, optionsList, selectedValue, on
 window.toggleMeasureSubPopup = function(index, triggerElem) {
     const m = measures[index];
     const options = [];
-    for (let i = 1; i <= 6; i++) options.push({ value: String(i), label: SUB_NAMES[i] });
+    for (let i = 1; i <= 7; i++) options.push({ value: String(i), label: SUB_NAMES[i] });
     toggleSubdivisionStylePopup(triggerElem, options, String(m.sub), (value) => {
         updateMeasure(index, 'sub', value);
     });
