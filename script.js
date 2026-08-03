@@ -20,11 +20,13 @@ let timerID = null;
 let uiTimerID = null;
 let uiNotes = [];
 let activeSubPopup = null;
+let activeSubPopupTrigger = null;
 let measures = [
     { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, accents: [], isCustom: false },
     { beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false }
 ];
 let targetCustomIndex = null;
+let targetRepeatIndex = null;
 
 // Nomi delle suddivisioni, condivisi tra il popup dei pallini numerati e quello
 // della sezione "Sequenza Battute" cosi' i due controlli restano identici.
@@ -59,6 +61,10 @@ const customBeatsInput = document.getElementById('customBeatsInput');
 const customSubInput = document.getElementById('customSubInput');
 const customModalCancel = document.getElementById('customModalCancel');
 const customModalSave = document.getElementById('customModalSave');
+const customRepeatModal = document.getElementById('customRepeatModal');
+const customRepeatInput = document.getElementById('customRepeatInput');
+const customRepeatModalCancel = document.getElementById('customRepeatModalCancel');
+const customRepeatModalSave = document.getElementById('customRepeatModalSave');
 const savePresetBtn = document.getElementById('savePresetBtn');
 const presetsContainer = document.getElementById('presetsContainer');
 const presetsEmpty = document.getElementById('presetsEmpty');
@@ -525,6 +531,7 @@ function setupDragToAdjust(inputElem, onUpdate) {
 setupDragToAdjust(bpmVal, (val) => setValidBpm(val));
 setupDragToAdjust(customBeatsInput);
 setupDragToAdjust(customSubInput);
+setupDragToAdjust(customRepeatInput);
 setupDragToAdjust(trainerBpmInc);
 setupDragToAdjust(trainerBarsInc);
 
@@ -844,6 +851,12 @@ resetAccentsBtn.addEventListener('click', () => {
 
 resetSequenceBtn.addEventListener('click', () => {
     if (isPlaying) return;
+    // "Reset Default" deve toccare SOLO la sequenza di battute e il BPM.
+    // Impostazioni globali come lo Swing/Shuffle vengono esplicitamente
+    // preservate (catturate prima e ripristinate dopo) cosi' non vengono
+    // azzerate per errore da questa azione.
+    const preservedSwing = swingAmount.value;
+
     measures = [
         { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, accents: [], isCustom: false },
         { beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false }
@@ -851,6 +864,10 @@ resetSequenceBtn.addEventListener('click', () => {
     currentMeasureIndex = 0;
     measureRepeatCounter = 0;
     setValidBpm(120);
+
+    swingAmount.value = preservedSwing;
+    swingValueText.innerText = `${swingAmount.value}%`;
+
     renderMeasuresList();
     renderDots(0, -1, -1);
     savePersistedData();
@@ -860,6 +877,65 @@ function closeBeatSubPopup() {
     if (activeSubPopup) {
         activeSubPopup.remove();
         activeSubPopup = null;
+        activeSubPopupTrigger = null;
+        window.removeEventListener('scroll', repositionActiveSubPopup, true);
+        window.removeEventListener('resize', repositionActiveSubPopup);
+    }
+}
+
+// Posiziona un popup (gia' agganciato a document.body, quindi immune al
+// clipping causato da contenitori con overflow scrollabile come .beat-dots)
+// vicino al triggerElem, scegliendo sopra o sotto in base allo spazio
+// disponibile nel viewport e restando sempre entro i bordi dello schermo.
+function positionFixedPopup(popup, triggerElem, preferredDirection) {
+    const triggerRect = triggerElem.getBoundingClientRect();
+    const margin = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Misura le dimensioni reali del popup (temporaneamente visibile ma
+    // invisibile all'occhio) prima di calcolarne la posizione definitiva.
+    popup.style.visibility = 'hidden';
+    popup.style.display = 'flex';
+    const popupRect = popup.getBoundingClientRect();
+    const popupWidth = popupRect.width;
+    const popupHeight = popupRect.height;
+
+    const spaceAbove = triggerRect.top;
+    const spaceBelow = vh - triggerRect.bottom;
+
+    let openUp = preferredDirection === 'up';
+    if (openUp && spaceAbove < popupHeight + margin && spaceBelow > spaceAbove) {
+        openUp = false;
+    } else if (!openUp && spaceBelow < popupHeight + margin && spaceAbove > spaceBelow) {
+        openUp = true;
+    }
+
+    let top = openUp
+        ? triggerRect.top - popupHeight - margin
+        : triggerRect.bottom + margin;
+    top = Math.max(margin, Math.min(top, vh - popupHeight - margin));
+
+    let left = triggerRect.left + (triggerRect.width / 2) - (popupWidth / 2);
+    left = Math.max(margin, Math.min(left, vw - popupWidth - margin));
+
+    popup.style.top = `${top}px`;
+    popup.style.left = `${left}px`;
+
+    // La freccetta del popup punta sempre al centro del trigger, anche se
+    // il popup e' stato spostato lateralmente per restare nel viewport.
+    const arrowLeft = (triggerRect.left + triggerRect.width / 2) - left;
+    popup.style.setProperty('--arrow-left', `${Math.max(10, Math.min(arrowLeft, popupWidth - 10))}px`);
+    popup.dataset.dir = openUp ? 'up' : 'down';
+
+    popup.style.visibility = '';
+    popup.style.display = '';
+}
+
+function repositionActiveSubPopup() {
+    if (activeSubPopup && activeSubPopupTrigger) {
+        const dir = activeSubPopup.dataset.dir === 'up' ? 'up' : 'down';
+        positionFixedPopup(activeSubPopup, activeSubPopupTrigger, dir);
     }
 }
 
@@ -884,9 +960,13 @@ function showBeatSubPopup(beatNumberElem, measureIndex, beatIndex) {
         popup.appendChild(opt);
     }
     
-    beatNumberElem.appendChild(popup);
+    document.body.appendChild(popup);
     activeSubPopup = popup;
-    
+    activeSubPopupTrigger = beatNumberElem;
+    positionFixedPopup(popup, beatNumberElem, 'up');
+    window.addEventListener('scroll', repositionActiveSubPopup, true);
+    window.addEventListener('resize', repositionActiveSubPopup);
+
     requestAnimationFrame(() => {
         popup.classList.add('active');
     });
@@ -915,8 +995,12 @@ function showSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPi
         popup.appendChild(el);
     });
 
-    triggerElem.parentElement.appendChild(popup);
+    document.body.appendChild(popup);
     activeSubPopup = popup;
+    activeSubPopupTrigger = triggerElem;
+    positionFixedPopup(popup, triggerElem, 'down');
+    window.addEventListener('scroll', repositionActiveSubPopup, true);
+    window.addEventListener('resize', repositionActiveSubPopup);
 
     requestAnimationFrame(() => {
         popup.classList.add('active');
@@ -924,7 +1008,7 @@ function showSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPi
 }
 
 function toggleSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPick) {
-    const wasOpenForThis = activeSubPopup && triggerElem.parentElement.contains(activeSubPopup);
+    const wasOpenForThis = activeSubPopup && activeSubPopupTrigger === triggerElem;
     closeBeatSubPopup();
     if (!wasOpenForThis) {
         showSubdivisionStylePopup(triggerElem, optionsList, selectedValue, onPick);
@@ -977,12 +1061,54 @@ window.togglePresetPopup = function(index, triggerElem) {
 
 window.toggleRepeatPopup = function(index, triggerElem) {
     const m = measures[index];
-    const options = [1,2,3,4,5,6,7,8,9,10].map(r => ({ value: String(r), label: `×${r}` }));
+    const isCustomValue = typeof m.repeat === 'number' && m.repeat > 5;
+
+    const options = [1,2,3,4,5].map(r => ({ value: String(r), label: `×${r}` }));
+    options.push({ value: 'custom', label: isCustomValue ? `×${m.repeat}` : 'Custom...' });
     options.push({ value: 'inf', label: 'Loop' });
-    toggleSubdivisionStylePopup(triggerElem, options, String(m.repeat), (value) => {
-        updateMeasure(index, 'repeat', value);
+
+    const currentValue = isCustomValue ? 'custom' : String(m.repeat);
+
+    toggleSubdivisionStylePopup(triggerElem, options, currentValue, (value) => {
+        if (value === 'custom') {
+            openCustomRepeatModal(index);
+        } else {
+            updateMeasure(index, 'repeat', value);
+        }
     });
 };
+
+function openCustomRepeatModal(index) {
+    targetRepeatIndex = index;
+    const m = measures[index];
+    customRepeatInput.value = (typeof m.repeat === 'number' && m.repeat > 5) ? m.repeat : 12;
+    customRepeatModal.classList.add('active');
+    setTimeout(() => {
+        customRepeatInput.focus();
+        customRepeatInput.select();
+    }, 100);
+}
+
+function closeCustomRepeatModal() {
+    customRepeatModal.classList.remove('active');
+    targetRepeatIndex = null;
+}
+
+customRepeatModalCancel.addEventListener('click', () => {
+    closeCustomRepeatModal();
+    renderMeasuresList();
+});
+
+customRepeatModalSave.addEventListener('click', () => {
+    if (targetRepeatIndex !== null) {
+        const r = parseInt(customRepeatInput.value, 10);
+        if (!isNaN(r) && r >= 1 && r <= 999) {
+            updateMeasure(targetRepeatIndex, 'repeat', String(r));
+        }
+    }
+    closeCustomRepeatModal();
+    renderMeasuresList();
+});
 
 // Il <select id="soundWaveSelect"> nativo resta nel DOM (nascosto) come unica
 // fonte di verità per il valore scelto, così tutto il codice di salvataggio/

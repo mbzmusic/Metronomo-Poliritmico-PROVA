@@ -1,7 +1,7 @@
 // Service Worker - Metronomo Poliritmico
 // Cache dell'app shell per l'utilizzo offline. Incrementa CACHE_NAME ad ogni release
 // per invalidare la cache precedente e forzare l'aggiornamento dei file.
-const CACHE_NAME = 'metronomo-poliritmico-v5';
+const CACHE_NAME = 'metronomo-poliritmico-v6';
 const APP_SHELL = [
   './',
   './index.html',

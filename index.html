@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Metronomo Poliritmico - Marco Bozzo</title>
-    <link rel="manifest" href="manifest.json?v=3">
-    <link rel="stylesheet" href="style.css?v=3">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=3">
-    <link rel="apple-touch-icon" href="icon-192.png?v=3">
+    <link rel="manifest" href="manifest.json?v=4">
+    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=4">
+    <link rel="apple-touch-icon" href="icon-192.png?v=4">
     <meta name="theme-color" content="#0e0e11">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -21,6 +21,7 @@
             <span class="author">Creato da Marco Bozzo</span>
         </div>
         <div class="header-actions">
+            <button id="statsBtn" class="icon-btn-header" type="button" title="Statistiche di Pratica" aria-label="Statistiche di Pratica">📊</button>
             <div class="master-knob-container">
                 <span class="master-label">Volume</span>
                 <div class="master-knob" id="masterKnob" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Volume Master">
@@ -168,9 +169,6 @@
         <div class="shortcut-hint">SPAZIO: AVVIO/STOP · ↑↓ TEMPO (SHIFT = ±5)</div>
     </div>
     
-    <div style="text-align: center; margin-top: 1rem;">
-        <button id="statsBtn" class="btn-action" style="font-size: 0.7rem;">📊 Statistiche di Pratica</button>
-    </div>
 
 </div>
 
@@ -192,6 +190,23 @@
         <div class="modal-buttons">
             <button class="btn-modal-cancel" id="customModalCancel">Annulla</button>
             <button class="btn-modal-save" id="customModalSave">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CUSTOM RIPETIZIONI -->
+<div class="custom-modal-overlay" id="customRepeatModal">
+    <div class="custom-modal-box">
+        <div class="modal-title">Ripetizioni Personalizzate</div>
+        <div class="modal-inputs-row">
+            <div class="modal-field">
+                <label>Numero di ripetizioni</label>
+                <input type="number" id="customRepeatInput" min="1" max="999" value="12">
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button class="btn-modal-cancel" id="customRepeatModalCancel">Annulla</button>
+            <button class="btn-modal-save" id="customRepeatModalSave">OK</button>
         </div>
     </div>
 </div>
@@ -237,6 +252,6 @@
     </div>
 </div>
 
-<script src="script.js?v=3"></script>
+<script src="script.js?v=4"></script>
 </body>
 </html>
