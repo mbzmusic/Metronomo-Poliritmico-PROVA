@@ -851,12 +851,8 @@ resetAccentsBtn.addEventListener('click', () => {
 
 resetSequenceBtn.addEventListener('click', () => {
     if (isPlaying) return;
-    // "Reset Default" deve toccare SOLO la sequenza di battute e il BPM.
-    // Impostazioni globali come lo Swing/Shuffle vengono esplicitamente
-    // preservate (catturate prima e ripristinate dopo) cosi' non vengono
-    // azzerate per errore da questa azione.
-    const preservedSwing = swingAmount.value;
-
+    // "Reset Default" riporta la sequenza, il BPM e lo Swing/Shuffle ai
+    // valori di fabbrica.
     measures = [
         { beats: 4, sub: 2, beatSubs: [2,2,2,2], repeat: 1, accents: [], isCustom: false },
         { beats: 4, sub: 4, beatSubs: [4,4,4,4], repeat: 1, accents: [], isCustom: false }
@@ -865,7 +861,7 @@ resetSequenceBtn.addEventListener('click', () => {
     measureRepeatCounter = 0;
     setValidBpm(120);
 
-    swingAmount.value = preservedSwing;
+    swingAmount.value = 0;
     swingValueText.innerText = `${swingAmount.value}%`;
 
     renderMeasuresList();

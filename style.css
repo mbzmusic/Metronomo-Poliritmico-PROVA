@@ -108,29 +108,30 @@ header h1 {
 }
 
 .icon-btn-header {
-    width: 38px;
-    height: 38px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: var(--knob-bg);
-    border: 1px solid #2e2e38;
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 6px 14px rgba(0,0,0,0.6);
+    background: transparent;
+    border: none;
     color: var(--text-muted);
     font-size: 1rem;
+    line-height: 1;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    opacity: 0.6;
+    transition: opacity 0.15s ease, transform 0.15s ease, background 0.15s ease;
     flex-shrink: 0;
 }
 
 .icon-btn-header:hover {
-    border-color: var(--accent-yellow);
-    box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 0 12px var(--accent-glow);
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.06);
 }
 
 .icon-btn-header:active {
-    transform: scale(0.92);
+    transform: scale(0.9);
 }
 
 .master-knob-container {
@@ -1032,6 +1033,37 @@ select:focus, select:hover {
     letter-spacing: 0.5px;
 }
 
+.modal-field input[type="number"] {
+    width: 84px;
+    background: var(--panel-inner);
+    border: 1px solid var(--card-border);
+    color: var(--text-main);
+    border-radius: 999px;
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    -moz-appearance: textfield;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.modal-field input[type="number"]::-webkit-outer-spin-button,
+.modal-field input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.modal-field input[type="number"]:hover {
+    border-color: rgba(250, 204, 21, 0.3);
+}
+
+.modal-field input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent-yellow);
+    background: rgba(250, 204, 21, 0.05);
+}
+
 .modal-buttons {
     display: flex;
     gap: 0.5rem;
@@ -1365,9 +1397,9 @@ select:focus, select:hover {
     }
 
     .icon-btn-header {
-        width: 34px;
-        height: 34px;
-        font-size: 0.9rem;
+        width: 28px;
+        height: 28px;
+        font-size: 0.85rem;
     }
 }
 
