@@ -30,7 +30,7 @@ let targetRepeatIndex = null;
 
 // Nomi delle suddivisioni, condivisi tra il popup dei pallini numerati e quello
 // della sezione "Sequenza Battute" cosi' i due controlli restano identici.
-const SUB_NAMES = ['', 'Quarti', 'Crome', 'Terzine', 'Quartine', 'Quintine', 'Sestine', 'Settime'];
+const SUB_NAMES = ['', 'Quarti', 'Duine', 'Terzine', 'Quartine', 'Quintine', 'Sestine', 'Settimine'];
 
 const bpmSlider = document.getElementById('bpmSlider');
 const bpmVal = document.getElementById('bpmVal');
@@ -653,9 +653,9 @@ function renderMeasuresList() {
                     </button>
                 ` : ''}
                 <div class="subdivision-selector">
-                    <div class="subdivision-current" tabindex="0" role="button" aria-haspopup="true" aria-label="Suddivisione: ${SUB_NAMES[m.sub] || 'Crome'}"
+                    <div class="subdivision-current" tabindex="0" role="button" aria-haspopup="true" aria-label="Suddivisione: ${SUB_NAMES[m.sub] || 'Duine'}"
                         onclick="event.stopPropagation(); window.toggleMeasureSubPopup(${index}, this)"
-                        onkeydown="if(event.code==='Enter'||event.code==='Space'){event.preventDefault();event.stopPropagation();window.toggleMeasureSubPopup(${index}, this)}">${SUB_NAMES[m.sub] || 'Crome'}</div>
+                        onkeydown="if(event.code==='Enter'||event.code==='Space'){event.preventDefault();event.stopPropagation();window.toggleMeasureSubPopup(${index}, this)}">${SUB_NAMES[m.sub] || 'Duine'}</div>
                 </div>
                 <div class="subdivision-selector">
                     <div class="subdivision-current" tabindex="0" role="button" aria-haspopup="true" aria-label="Ripetizioni: ${repeatLabel}"
