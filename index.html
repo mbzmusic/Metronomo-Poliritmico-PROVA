@@ -2,328 +2,142 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Metronomo Poliritmico - Marco Bozzo</title>
-    <link rel="manifest" href="manifest.json?v=7">
-    <link rel="stylesheet" href="style.css?v=7">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=7">
-    <link rel="apple-touch-icon" href="icon-192.png?v=7">
-    <meta name="theme-color" content="#0e0e11">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metronomo & Allenatore di Ritmo</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
-<div class="app-container">
-    <header>
-        <div class="brand-title">
-            <h1>Metronomo Poliritmico</h1>
-            <span class="author">Creato da Marco Bozzo</span>
-        </div>
-        <div class="header-actions">
-            <button id="statsBtn" class="icon-btn-header" type="button" title="Statistiche di Pratica" aria-label="Statistiche di Pratica">📊</button>
-            <div class="master-knob-container">
-                <span class="master-label">Volume</span>
-                <div class="master-knob" id="masterKnob" tabindex="0" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-label="Volume Master">
-                    <svg class="knob-ring" viewBox="0 0 52 52">
-                        <circle class="bg-circle" cx="26" cy="26" r="23"></circle>
-                        <circle class="val-circle" id="valCircle" cx="26" cy="26" r="23"></circle>
-                    </svg>
-                    <div class="knob-indicator" id="knobIndicator"></div>
-                </div>
-                <span class="master-value-text" id="masterValueText">50%</span>
+    <div class="app-container">
+        <!-- Header & Main Controls -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="logo-icon">♩</div>
+                <h1>RhythmPulse <span class="badge">Pro</span></h1>
             </div>
-        </div>
-    </header>
-
-    <div class="mode-tabs" role="tablist" aria-label="Modalità app">
-        <button class="mode-tab active" id="tabMetronomo" role="tab" aria-selected="true" type="button">Metronomo</button>
-        <button class="mode-tab" id="tabPoliritmia" role="tab" aria-selected="false" type="button">Poliritmia</button>
-    </div>
-
-    <div class="bpm-display">
-        <div class="bpm-row-top">
-            <button class="btn-bpm-step" id="bpmMinus1">−</button>
             
-            <div class="bpm-value-container">
-                <input type="number" id="bpmVal" class="bpm-value drag-field" value="120" min="20" max="300" step="1">
-                <span class="agogica-label" id="agogicaLabel">Allegro</span>
-                <span class="bpm-label">Battiti per Minuto (BPM)</span>
+            <div class="view-toggle-container">
+                <span class="toggle-label">Vista:</span>
+                <div class="toggle-switch">
+                    <button id="viewDotsBtn" class="toggle-btn active" data-view="dots">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="6" cy="12" r="3"/><circle cx="12" cy="12" r="3"/><circle cx="18" cy="12" r="3"/>
+                        </svg>
+                        Pallini
+                    </button>
+                    <button id="viewNotationBtn" class="toggle-btn" data-view="notation">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                        </svg>
+                        Notazione
+                    </button>
+                </div>
             </div>
+        </header>
 
-            <button class="btn-bpm-step" id="bpmPlus1">+</button>
-        </div>
-        
-        <input type="range" id="bpmSlider" class="bpm-slider" min="20" max="300" value="120" step="1">
-        
-        <!-- Spostati qui i pulsanti -5 e +5 come richiesto -->
-        <div class="tap-tempo-row">
-            <button id="tapTempoBtn" class="btn-tap">TAP TEMPO</button>
-            <button class="btn-bpm-step" id="bpmMinus5">−5</button>
-            <button class="btn-bpm-step" id="bpmPlus5">+5</button>
-        </div>
-    </div>
-
-    <div class="view-metronomo" id="viewMetronomo">
-
-    <div class="visualizer">
-        <div class="visualizer-top-row">
-            <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
-            <div class="viz-mode-toggle" role="tablist" aria-label="Vista suddivisioni">
-                <button type="button" id="vizDotsBtn" class="viz-mode-btn active" role="tab" aria-selected="true" title="Vista pallini" aria-label="Vista pallini">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="5" cy="12" r="3"></circle><circle cx="12" cy="12" r="3"></circle><circle cx="19" cy="12" r="3"></circle></svg>
+        <!-- Primary Playback & Tempo Panel -->
+        <section class="control-card">
+            <div class="main-play-section">
+                <button id="playBtn" class="btn-play" aria-label="Avvia o Ferma Metronomo">
+                    <span class="play-icon">▶</span>
+                    <span class="play-text">AVVIA</span>
                 </button>
-                <button type="button" id="vizNotationBtn" class="viz-mode-btn" role="tab" aria-selected="false" title="Vista notazione musicale" aria-label="Vista notazione musicale">
-                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg>
+                <button id="tapTempoBtn" class="btn-secondary tap-btn">TAP TEMPO</button>
+            </div>
+
+            <div class="tempo-section">
+                <div class="tempo-display-wrapper">
+                    <button id="tempoMinus" class="btn-circle">-</button>
+                    <div class="tempo-readout">
+                        <input type="number" id="bpmInput" value="120" min="30" max="300">
+                        <span class="bpm-label">BPM</span>
+                    </div>
+                    <button id="tempoPlus" class="btn-circle">+</button>
+                </div>
+                <input type="range" id="bpmSlider" min="30" max="300" value="120" class="tempo-slider">
+                <div class="tempo-presets">
+                    <button class="preset-btn" data-bpm="60">Largo (60)</button>
+                    <button class="preset-btn" data-bpm="90">Andante (90)</button>
+                    <button class="preset-btn active" data-bpm="120">Moderato (120)</button>
+                    <button class="preset-btn" data-bpm="140">Allegro (140)</button>
+                    <button class="preset-btn" data-bpm="170">Presto (170)</button>
+                </div>
+            </div>
+
+            <div class="settings-grid">
+                <div class="setting-item">
+                    <label for="timeSigSelect">Tempo (In chiave)</label>
+                    <select id="timeSigSelect" class="custom-select">
+                        <option value="2">2/4</option>
+                        <option value="3">3/4</option>
+                        <option value="4" selected>4/4</option>
+                        <option value="5">5/4</option>
+                        <option value="6">6/8</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="volumeSlider">Volume</label>
+                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.8" class="volume-slider">
+                </div>
+                <div class="setting-item">
+                    <label for="soundSelect">Timbro Audio</label>
+                    <select id="soundSelect" class="custom-select">
+                        <option value="digital">Digitale Beep</option>
+                        <option value="woodblock">Woodblock</option>
+                        <option value="cowbell">Campana</option>
+                        <option value="click">Click di Studio</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Rhythm Grid Display Section -->
+        <section class="rhythm-display-card">
+            <div class="section-title">
+                <h2>Struttura della Misura</h2>
+                <p class="subtitle">Clicca sul numero del beat per cambiare la suddivisione</p>
+            </div>
+
+            <!-- Unified Grid Container with strict visual parity -->
+            <div id="measureGrid" class="measure-grid view-dots">
+                <!-- Dynamic Content Rendered Here by JS -->
+            </div>
+        </section>
+
+        <!-- Global Popup for Subdivision Selection -->
+        <div id="subdivisionPopup" class="subdivision-popup hidden" tabindex="-1">
+            <div class="popup-header">Seleziona Suddivisione</div>
+            <div class="popup-options">
+                <button class="sub-option" data-sub="1">
+                    <span class="sub-icon">♩</span>
+                    <span class="sub-name">1 - Semiminima</span>
+                </button>
+                <button class="sub-option" data-sub="2">
+                    <span class="sub-icon">♫</span>
+                    <span class="sub-name">2 - Crome (1/8)</span>
+                </button>
+                <button class="sub-option" data-sub="3">
+                    <span class="sub-icon">𝄾3</span>
+                    <span class="sub-name">3 - Terzina (1/8t)</span>
+                </button>
+                <button class="sub-option" data-sub="4">
+                    <span class="sub-icon">♬</span>
+                    <span class="sub-name">4 - Sedicesimi (1/16)</span>
+                </button>
+                <button class="sub-option" data-sub="5">
+                    <span class="sub-icon">5</span>
+                    <span class="sub-name">5 - Quintina</span>
+                </button>
+                <button class="sub-option" data-sub="6">
+                    <span class="sub-icon">6</span>
+                    <span class="sub-name">6 - Sestina</span>
                 </button>
             </div>
         </div>
-        <div class="beat-dots" id="dotsContainer"></div>
-        <div class="beat-movement-display" id="movementDisplay">
-            MOVIMENTO <span class="highlight">1</span> DI 4
-        </div>
-        <div class="dot-hint" id="dotHint">
-            Clicca sul pallino per: Normale (Grigio) &nbsp;→&nbsp; Accento (Arancione) &nbsp;→&nbsp; Muto (Rosso)<br>
-            · Tieni premuto sul numero del beat per cambiare la suddivisione
-        </div>
     </div>
 
-    <div class="settings-panel">
-        <div class="setting-row">
-            <label class="toggle-row">
-                <input type="checkbox" id="countdownToggle" checked>
-                Countdown iniziale (4 battiti)
-            </label>
-        </div>
-
-        <div class="setting-row">
-            <label class="toggle-row">
-                <input type="checkbox" id="trainerToggle">
-                Tempo Trainer (Incremento automatico)
-            </label>
-        </div>
-        <div class="setting-row trainer-config-row" id="trainerConfigRow" style="opacity: 0.5;">
-            <span>Aumenta di:</span>
-            <div class="trainer-inputs">
-                <input type="number" id="trainerBpmInc" value="2" min="1" max="20"> BPM ogni 
-                <input type="number" id="trainerBarsInc" value="4" min="1" max="32"> Battute
-            </div>
-        </div>
-
-        <div class="setting-row">
-            <label class="toggle-row">
-                <input type="checkbox" id="silentModeToggle">
-                Silenzio a Intervalli (Bruce Lee Mode)
-            </label>
-        </div>
-        <div class="setting-row trainer-config-row" id="silentConfigRow" style="opacity: 0.5;">
-            <span>Suona per:</span>
-            <div class="trainer-inputs">
-                <input type="number" id="silentAudibleBars" value="2" min="1" max="16"> Battute, poi taci per 
-                <input type="number" id="silentMuteBars" value="1" min="1" max="16"> Battute
-            </div>
-        </div>
-
-        <div class="setting-row">
-            <label>Swing / Shuffle:</label>
-            <div style="display:flex; align-items:center; gap:8px; width: 60%;">
-                <input type="range" id="swingAmount" min="0" max="75" value="0" step="1">
-                <span id="swingValueText" style="font-size:0.7rem; font-weight:700; color:var(--accent-yellow); width: 35px; text-align:right;">0%</span>
-            </div>
-        </div>
-
-        <div class="setting-row">
-            <label>Suono Suddivisioni:</label>
-            <div class="subdivision-selector">
-                <div class="subdivision-current" id="soundWaveTrigger" tabindex="0" role="button" aria-haspopup="true" aria-label="Suono Suddivisioni">Sinusoidale (Morbido)</div>
-            </div>
-            <select id="soundWaveSelect" class="native-select-hidden" aria-hidden="true" tabindex="-1">
-                <option value="sine">Sinusoidale (Morbido)</option>
-                <option value="triangle">Triangolare (Legnoso)</option>
-                <option value="square">Quadrata (8-bit)</option>
-                <option value="woodblock">Woodblock (Legnetto)</option>
-                <option value="cowbell">Cowbell (Campaccio)</option>
-                <option value="rimshot">Rimshot (Rullante)</option>
-            </select>
-        </div>
-
-        <div class="setting-row">
-            <label>Vol. Metronomo:</label>
-            <input type="range" id="metroVol" min="0" max="1" step="0.05" value="0.8" style="width: 60%;">
-        </div>
-    </div>
-
-    <div class="settings-panel">
-        <div class="section-title-bar">
-            <h2>Preset Salvati</h2>
-            <button id="savePresetBtn" class="btn-action">+ Salva Preset</button>
-        </div>
-        <div class="presets-list" id="presetsContainer">
-            <div class="presets-empty" id="presetsEmpty">Nessun preset salvato. Configura una sequenza e premi "+ Salva Preset".</div>
-        </div>
-        
-        <div class="share-link-container">
-            <button id="shareLinkBtn" class="btn-share">🔗 Copia Link Condivisibile</button>
-        </div>
-    </div>
-
-    <div class="settings-panel">
-        <div class="section-title-bar">
-            <h2>Sequenza Battute</h2>
-            <div style="display:flex; gap:0.5rem;">
-                <button id="resetSequenceBtn" class="btn-action">Reset Default</button>
-                <button id="resetAccentsBtn" class="btn-action">Reset accenti</button>
-            </div>
-        </div>
-        
-        <div class="measures-list" id="measuresContainer"></div>
-        
-        <button id="addMeasureBtn" class="btn-add">+ AGGIUNGI BATTUTA</button>
-    </div>
-
-    </div>
-
-    <div class="view-poliritmia" id="viewPoliritmia" style="display:none;">
-
-        <div class="poli-view-toggle">
-            <button type="button" id="poliViewLinearBtn" class="poli-view-btn active" title="Vista a righi" aria-label="Vista a righi">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="20" y2="17"></line></svg>
-            </button>
-            <button type="button" id="poliViewRadialBtn" class="poli-view-btn" title="Vista radiale" aria-label="Vista radiale">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="4"></circle></svg>
-            </button>
-        </div>
-
-        <div class="poli-linear-view" id="poliLinearView">
-            <div class="poli-playhead" id="poliPlayhead"></div>
-            <div id="poliRowsContainer"></div>
-        </div>
-
-        <div class="poli-radial-view" id="poliRadialView" style="display:none;">
-            <svg viewBox="0 0 300 300" id="poliRadialSvg" role="img" aria-label="Vista radiale dei livelli poliritmici">
-                <line id="poliNeedle" x1="150" y1="150" x2="150" y2="20" class="poli-needle"></line>
-                <circle cx="150" cy="150" r="5" class="poli-needle-hub"></circle>
-            </svg>
-        </div>
-
-        <div class="setting-row">
-            <label>Durata ciclo (battiti):</label>
-            <input type="number" id="poliCycleBeats" value="4" min="1" max="16" style="width:70px; background:var(--panel-inner); border:1px solid var(--card-border); color:#fff; border-radius:8px; padding:4px 8px; text-align:center;">
-        </div>
-
-        <div class="section-title-bar">
-            <h2>Livelli Ritmici</h2>
-        </div>
-        <div class="poli-layers-list" id="poliLayersContainer"></div>
-        <button id="poliAddLayerBtn" class="btn-add">+ AGGIUNGI LIVELLO</button>
-
-    </div>
-
-    <div class="controls">
-        <button id="playBtn" class="btn-play">AVVIA</button>
-        <div class="shortcut-hint">SPAZIO: AVVIO/STOP · ↑↓ TEMPO (SHIFT = ±5)</div>
-    </div>
-    
-
-</div>
-
-<!-- MODAL CUSTOM TIME SIGNATURE -->
-<div class="custom-modal-overlay" id="customModal">
-    <div class="custom-modal-box">
-        <div class="modal-title">Metro Personalizzato</div>
-        <div class="modal-inputs-row">
-            <div class="modal-field">
-                <label>Numeratore</label>
-                <input type="number" id="customBeatsInput" min="1" max="64" value="5">
-            </div>
-            <div style="font-size:1.5rem; color:var(--text-muted);">/</div>
-            <div class="modal-field">
-                <label>Denominatore</label>
-                <input type="number" id="customSubInput" min="1" max="64" value="4">
-            </div>
-        </div>
-        <div class="modal-buttons">
-            <button class="btn-modal-cancel" id="customModalCancel">Annulla</button>
-            <button class="btn-modal-save" id="customModalSave">OK</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL CUSTOM RIPETIZIONI -->
-<div class="custom-modal-overlay" id="customRepeatModal">
-    <div class="custom-modal-box">
-        <div class="modal-title">Ripetizioni Personalizzate</div>
-        <div class="modal-inputs-row">
-            <div class="modal-field">
-                <label>Numero di ripetizioni</label>
-                <input type="number" id="customRepeatInput" min="1" max="999" value="12">
-            </div>
-        </div>
-        <div class="modal-buttons">
-            <button class="btn-modal-cancel" id="customRepeatModalCancel">Annulla</button>
-            <button class="btn-modal-save" id="customRepeatModalSave">OK</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL LIVELLO POLIRITMIA -->
-<div class="custom-modal-overlay" id="poliLayerModal">
-    <div class="custom-modal-box">
-        <div class="modal-title">Livello Poliritmico</div>
-        <div class="modal-inputs-row">
-            <div class="modal-field">
-                <label>Suddivisioni per ciclo</label>
-                <input type="number" id="poliLayerBeatsInput" min="1" max="32" value="3">
-            </div>
-        </div>
-        <div class="modal-buttons">
-            <button class="btn-modal-cancel" id="poliLayerModalCancel">Annulla</button>
-            <button class="btn-modal-save" id="poliLayerModalSave">OK</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL SAVE PRESET -->
-<div class="custom-modal-overlay" id="savePresetModal">
-    <div class="custom-modal-box">
-        <div class="modal-title">Salva Preset</div>
-        <div class="modal-field" style="width:100%">
-            <label>Nome Preset</label>
-            <input type="text" id="presetNameInput" placeholder="Es. Studio Terzine" style="width:100%; padding:0.5rem; background:var(--panel-inner); border:1px solid var(--card-border); color:#fff; border-radius:8px; text-align:center;">
-        </div>
-        <div class="modal-buttons">
-            <button class="btn-modal-cancel" id="savePresetCancel">Annulla</button>
-            <button class="btn-modal-save" id="savePresetConfirm">Salva</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL STATS -->
-<div class="custom-modal-overlay" id="statsModal">
-    <div class="custom-modal-box" style="width: 320px;">
-        <div class="modal-title">📊 Statistiche di Pratica</div>
-        <div class="stats-grid" id="statsGrid"></div>
-        <div class="modal-buttons" style="justify-content: space-between; width: 100%;">
-            <button class="btn-modal-cancel" id="statsResetBtn" style="background: var(--accent-red); color: white;">Azzera Statistiche</button>
-            <button class="btn-modal-save" id="statsCloseBtn">Chiudi</button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL SHARED IMPORT -->
-<div class="custom-modal-overlay" id="sharedImportModal">
-    <div class="custom-modal-box">
-        <div class="modal-title">Esercizio Condiviso</div>
-        <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin: 0.5rem 0;">
-            È stato rilevato un esercizio condiviso tramite link. Vuoi caricarlo? La sequenza corrente verrà sostituita.
-        </p>
-        <div class="modal-buttons">
-            <button class="btn-modal-cancel" id="sharedImportCancel">Ignora</button>
-            <button class="btn-modal-save" id="sharedImportConfirm">Carica</button>
-        </div>
-    </div>
-</div>
-
-<script src="script.js?v=7"></script>
+    <script src="script.js"></script>
 </body>
 </html>
