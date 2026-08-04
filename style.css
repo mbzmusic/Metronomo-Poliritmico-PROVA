@@ -414,6 +414,95 @@ input[type="range"]::-webkit-slider-thumb:hover {
     font-weight: 800;
 }
 
+.visualizer-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+}
+
+.viz-mode-toggle {
+    display: flex;
+    gap: 6px;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.viz-mode-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--panel-inner);
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    touch-action: manipulation;
+}
+
+.viz-mode-btn.active {
+    background: var(--card-bg);
+    border-color: var(--accent-yellow);
+    color: var(--accent-yellow);
+}
+
+/* ===== Vista Notazione Musicale ===== */
+.beat-notation-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.beat-notation {
+    overflow: visible;
+    display: block;
+}
+
+.beat-notation .beam {
+    fill: #d4d4d8;
+}
+
+.beat-notation .tuplet-num {
+    font-size: 10px;
+    font-weight: 700;
+    fill: var(--text-muted);
+    font-family: inherit;
+}
+
+.beat-notation .note-el {
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.beat-notation .note-el .hl {
+    opacity: 0;
+    transition: opacity 0.1s ease;
+}
+
+.beat-notation .note-el.active .hl {
+    opacity: 0.32;
+}
+
+.beat-notation .note-el.active.state-accent .hl {
+    opacity: 0.5;
+}
+
+.beat-notation .note-el.active.state-mute .hl {
+    opacity: 0.45;
+}
+
+.beat-notation .note-el:focus {
+    outline: 2px solid var(--accent-yellow);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
 .beat-dots {
     display: flex;
     gap: 0.35rem;

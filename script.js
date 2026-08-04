@@ -39,6 +39,9 @@ const playBtn = document.getElementById('playBtn');
 const dotsContainer = document.getElementById('dotsContainer');
 const currentMeasureBadge = document.getElementById('currentMeasureBadge');
 const movementDisplay = document.getElementById('movementDisplay');
+const dotHint = document.getElementById('dotHint');
+const vizDotsBtn = document.getElementById('vizDotsBtn');
+const vizNotationBtn = document.getElementById('vizNotationBtn');
 const measuresContainer = document.getElementById('measuresContainer');
 const addMeasureBtn = document.getElementById('addMeasureBtn');
 const resetAccentsBtn = document.getElementById('resetAccentsBtn');
@@ -1213,7 +1216,242 @@ function applyDotAccentClass(dot, state) {
     dot.setAttribute('aria-label', `Battuta ${beatNum}, suddivisione ${subNum}, stato ${stateLabel}`);
 }
 
+// ============================================================
+// VISTA NOTAZIONE MUSICALE
+// Vista alternativa ai pallini: mostra le figure musicali reali
+// (semiminime, crome, terzine, semicrome...) corrispondenti alla
+// suddivisione scelta per ogni beat. Un beat mutato diventa la
+// pausa corrispondente invece di restare un pallino colorato.
+// ============================================================
+let visualizerMode = 'dots'; // 'dots' | 'notation'
+const NOTE_COLOR_NORMAL = '#e4e4e7';
+
+// Quante travature (beam) servono in base al numero di suddivisioni del
+// beat: 1 = nessuna (semiminima), 2-3 = una trave (crome / terzine di
+// crome), 4+ = doppia trave (semicrome e derivati: quintine, sestine...).
+function noteBeamLevel(n) {
+    if (n <= 1) return 0;
+    if (n <= 3) return 1;
+    return 2;
+}
+
+// Suddivisioni "irregolari" (non potenze di 2) che richiedono il numero
+// della terzina/quintina/ecc. sopra il gruppo.
+function isTupletSub(n) {
+    return n === 3 || n === 5 || n === 6 || n === 7;
+}
+
+// Disegna la pausa corrispondente al livello di trave del beat corrente
+// (pausa di semiminima / croma / semicroma), colorata di rosso come i
+// pallini muti.
+// Uncino di croma/semicroma (bandierina reale), riusato sia per le pause
+// che per le note isolate: forma chiusa e piena, come su uno spartito.
+function flagGlyph(x, y, color) {
+    return `<path d="M ${x} ${y} C ${x + 7} ${y + 1} ${x + 7.5} ${y + 7.5} ${x + 1.5} ${y + 11} C ${x + 5.5} ${y + 7} ${x + 5} ${y + 2.5} ${x} ${y} Z" style="fill:${color}" stroke="none"/>`;
+}
+
+// Disegna la pausa reale corrispondente al valore del beat corrente (pausa
+// di semiminima / croma / semicroma), colorata di rosso come i pallini muti.
+// Disegna la pausa reale corrispondente al valore del beat corrente, fedele
+// alla notazione classica (Semínima / Colcheia / Semicolcheia), colorata di
+// rosso come i pallini muti.
+function restGlyphMarkup(cx, staffY, level, color) {
+    if (level <= 0) {
+        // Pausa di semiminima: zigzag a due anelli come sullo spartito reale.
+        return `<path class="rest-glyph" d="M ${cx + 3} ${staffY - 15} C ${cx - 5} ${staffY - 12} ${cx + 7} ${staffY - 8} ${cx - 1} ${staffY - 4} C ${cx + 6} ${staffY - 1} ${cx - 5} ${staffY + 3} ${cx + 3} ${staffY + 7} C ${cx - 3} ${staffY + 9} ${cx + 2} ${staffY + 13} ${cx - 4} ${staffY + 15}" style="stroke:${color}" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    }
+    // Pausa di croma/semicroma: una o due bandierine piene su un'asta che
+    // termina con il piccolo uncino curvo verso il basso, come in Colcheia
+    // e Semicolcheia.
+    const flags = level >= 2 ? 2 : 1;
+    let out = '';
+    for (let f = 0; f < flags; f++) {
+        out += flagGlyph(cx + 3, staffY - 11 + f * 8, color);
+    }
+    out += `<path d="M ${cx + 4} ${staffY - 9} C ${cx - 2} ${staffY - 2} ${cx - 1} ${staffY + 6} ${cx + 3} ${staffY + 11} C ${cx - 1} ${staffY + 13} ${cx - 5} ${staffY + 12} ${cx - 5} ${staffY + 9}" style="stroke:${color}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+    return `<g class="rest-glyph">${out}</g>`;
+}
+
+// Costruisce il markup SVG di un intero beat: pallini/pause disposti su un
+// unico rigo di riferimento, con travature che collegano le note "suonate"
+// consecutive e si interrompono in corrispondenza di una pausa (nota muta),
+// esattamente come richiesto: nota - pausa - nota - nota resta leggibile
+// come due gruppi separati invece di un'unica trave continua.
+function buildBeatNotationMarkup(measureIndex, beatIndex, n, states, globalStart) {
+    const NOTE_GAP = 34, MARGIN = 26;
+    const width = Math.max(52, MARGIN * 2 + Math.max(0, n - 1) * NOTE_GAP);
+    const height = 70;
+    const staffY = 54, stemTop1 = 28, stemTop2 = 34, tupletY = 20;
+    const xs = [];
+    for (let i = 0; i < n; i++) xs.push(MARGIN + i * NOTE_GAP);
+
+    const beamLevel = noteBeamLevel(n);
+    const tuplet = isTupletSub(n);
+
+    let svg = `<svg class="beat-notation" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Notazione battito ${beatIndex + 1}">`;
+
+    // Raggruppa le suddivisioni "suonate" (non mute) in run consecutivi:
+    // ogni run diventa una travatura; le pause spezzano il gruppo.
+    const runs = [];
+    let cur = [];
+    for (let i = 0; i < n; i++) {
+        if (states[i] !== 2) {
+            cur.push(i);
+        } else {
+            if (cur.length) runs.push(cur);
+            cur = [];
+        }
+    }
+    if (cur.length) runs.push(cur);
+
+    // Le note isolate (non affiancate ad altre suonate nello stesso beat)
+    // ricevono l'uncino reale di croma/semicroma sul gambo, non una
+    // travatura "monca": e' cosi' che viene scritta una nota sola su uno
+    // spartito vero, ed e' quello che deve imparare a riconoscere l'allievo.
+    const isolatedIdx = new Set();
+    if (beamLevel > 0) {
+        runs.forEach(run => {
+            if (run.length >= 2) {
+                const x1 = xs[run[0]] + 4.6, x2 = xs[run[run.length - 1]] + 4.6;
+                svg += `<rect class="beam" x="${x1}" y="${stemTop1}" width="${x2 - x1}" height="2.6" rx="1"></rect>`;
+                if (beamLevel > 1) svg += `<rect class="beam" x="${x1}" y="${stemTop2}" width="${x2 - x1}" height="2.6" rx="1"></rect>`;
+            } else if (run.length === 1 && n > 1) {
+                isolatedIdx.add(run[0]);
+            }
+        });
+    }
+
+    if (tuplet) {
+        const midx = (xs[0] + xs[n - 1]) / 2 + 5;
+        svg += `<text class="tuplet-num" x="${midx}" y="${tupletY}" text-anchor="middle">${n}</text>`;
+    }
+
+    for (let i = 0; i < n; i++) {
+        const state = states[i] || 0;
+        const cx = xs[i];
+        const stateClass = state === 1 ? ' state-accent' : state === 2 ? ' state-mute' : '';
+        const hlColor = state === 1 ? 'var(--accent-orange)' : state === 2 ? 'var(--accent-red)' : 'var(--accent-yellow)';
+        const stateLabel = state === 1 ? 'accento' : state === 2 ? 'muto' : 'normale';
+        svg += `<g class="note-el${stateClass}" data-measure="${measureIndex}" data-beat="${beatIndex}" data-sub="${i}" tabindex="0" role="button" aria-label="Battuta ${beatIndex + 1}, suddivisione ${i + 1}, stato ${stateLabel}">`;
+        svg += `<circle class="hl" cx="${cx + 2.5}" cy="${staffY - 10}" r="15" style="fill:${hlColor}"></circle>`;
+        if (state === 2) {
+            svg += restGlyphMarkup(cx + 3, staffY, beamLevel, 'var(--accent-red)');
+        } else {
+            const col = state === 1 ? 'var(--accent-orange)' : NOTE_COLOR_NORMAL;
+            const downbeatStroke = i === 0 ? 'stroke:var(--accent-yellow);stroke-width:1;' : '';
+            svg += `<line class="stem" x1="${cx + 4.6}" y1="${staffY - 1.5}" x2="${cx + 4.6}" y2="${stemTop1}" style="stroke:${col}" stroke-width="1.3"></line>`;
+            svg += `<ellipse class="nh" cx="${cx}" cy="${staffY}" rx="5" ry="3.8" transform="rotate(-20 ${cx} ${staffY})" style="fill:${col};${downbeatStroke}"></ellipse>`;
+            if (isolatedIdx.has(i)) {
+                for (let f = 0; f < beamLevel; f++) svg += flagGlyph(cx + 4.6, stemTop1 + f * 6, col);
+            }
+        }
+        svg += `</g>`;
+    }
+
+    svg += `</svg>`;
+    return svg;
+}
+
+function buildMeasureNotation(measureIndex, config, key) {
+    dotsContainer.innerHTML = '';
+    const dotEls = [];
+    const beatNumEls = [];
+    let globalSubBeatIndex = 0;
+
+    for (let b = 0; b < config.beats; b++) {
+        const group = document.createElement('div');
+        group.className = 'beat-group';
+
+        const beatNumber = document.createElement('div');
+        beatNumber.className = 'beat-number';
+        beatNumber.textContent = b + 1;
+        setupBeatLongPress(beatNumber, measureIndex, b);
+        group.appendChild(beatNumber);
+        beatNumEls.push(beatNumber);
+
+        const n = config.beatSubs[b];
+        const states = [];
+        for (let s = 0; s < n; s++) states.push(config.accents[globalSubBeatIndex + s] || 0);
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'beat-notation-row';
+        wrapper.innerHTML = buildBeatNotationMarkup(measureIndex, b, n, states, globalSubBeatIndex);
+        group.appendChild(wrapper);
+
+        wrapper.querySelectorAll('.note-el').forEach(el => dotEls.push(el));
+
+        globalSubBeatIndex += n;
+        group.dataset.beatIndex = String(b);
+        dotsContainer.appendChild(group);
+    }
+
+    dotsRenderState = { mode: 'measure', key, dotEls, beatNumEls };
+
+    document.querySelectorAll('.measure-row').forEach((row, idx) => {
+        row.classList.toggle('current', idx === measureIndex);
+    });
+}
+
+// Calcola l'indice globale (nell'array piatto config.accents) di una
+// suddivisione dato il beat e la posizione al suo interno.
+function globalSubIndex(config, beatIndex, subIndex) {
+    let idx = 0;
+    for (let i = 0; i < beatIndex; i++) idx += config.beatSubs[i];
+    return idx + subIndex;
+}
+
+// Cicla lo stato (normale -> accento -> muto) di una nota/pausa cliccata
+// nella vista notazione. A differenza dei pallini, qui serve ricostruire
+// l'intero beat perché cambiare uno stato puo' cambiare il raggruppamento
+// delle travature (una pausa spezza il gruppo).
+function handleNoteElActivate(el) {
+    const measureIndex = parseInt(el.dataset.measure, 10);
+    const beatIndex = parseInt(el.dataset.beat, 10);
+    const subIndex = parseInt(el.dataset.sub, 10);
+    const config = measures[measureIndex];
+    if (!config) return;
+    const idx = globalSubIndex(config, beatIndex, subIndex);
+    const st = config.accents[idx] || 0;
+    config.accents[idx] = (st + 1) % 3;
+    savePersistedData();
+    renderDots(measureIndex, -1, -1);
+}
+
+dotsContainer.addEventListener('click', (e) => {
+    const el = e.target.closest('.note-el');
+    if (el) handleNoteElActivate(el);
+});
+dotsContainer.addEventListener('keydown', (e) => {
+    if (e.code !== 'Enter' && e.code !== 'Space') return;
+    const el = e.target.closest('.note-el');
+    if (el) {
+        e.preventDefault();
+        handleNoteElActivate(el);
+    }
+});
+
+const NOTATION_HINT = 'Clicca sulla nota per: Normale &nbsp;→&nbsp; Accento (Arancione) &nbsp;→&nbsp; Pausa (Muto, Rosso)<br>· Tieni premuto sul numero del beat per cambiare la suddivisione';
+const DOTS_HINT = 'Clicca sul pallino per: Normale (Grigio) &nbsp;→&nbsp; Accento (Arancione) &nbsp;→&nbsp; Muto (Rosso)<br>· Tieni premuto sul numero del beat per cambiare la suddivisione';
+
+function setVisualizerMode(mode) {
+    if (visualizerMode === mode) return;
+    visualizerMode = mode;
+    vizDotsBtn.classList.toggle('active', mode === 'dots');
+    vizDotsBtn.setAttribute('aria-selected', String(mode === 'dots'));
+    vizNotationBtn.classList.toggle('active', mode === 'notation');
+    vizNotationBtn.setAttribute('aria-selected', String(mode === 'notation'));
+    if (dotHint) dotHint.innerHTML = mode === 'notation' ? NOTATION_HINT : DOTS_HINT;
+    renderDots(currentMeasureIndex, -1, -1);
+}
+
+vizDotsBtn.addEventListener('click', () => setVisualizerMode('dots'));
+vizNotationBtn.addEventListener('click', () => setVisualizerMode('notation'));
+
 function buildMeasureDots(measureIndex, config, key) {
+    if (visualizerMode === 'notation') {
+        buildMeasureNotation(measureIndex, config, key);
+        return;
+    }
     dotsContainer.innerHTML = '';
     const dotEls = [];
     const beatNumEls = [];
@@ -1328,7 +1566,8 @@ function renderDots(measureIndex, activeBeat, activeSubBeatInBeat, isCountdownMo
     const currBeat = activeBeat >= 0 ? activeBeat + 1 : 1;
     movementDisplay.innerHTML = `MOVIMENTO <span class="highlight">${currBeat}</span> DI ${config.beats}`;
 
-    const key = 'm' + measureIndex + ':' + config.beatSubs.join(',');
+    const key = 'm' + measureIndex + ':' + config.beatSubs.join(',') + ':' + visualizerMode +
+        (visualizerMode === 'notation' ? ':' + config.accents.join(',') : '');
     if (!dotsRenderState || dotsRenderState.mode !== 'measure' || dotsRenderState.key !== key) {
         buildMeasureDots(measureIndex, config, key);
     }
