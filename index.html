@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Metronomo Poliritmico - Marco Bozzo</title>
-    <link rel="manifest" href="manifest.json?v=6">
-    <link rel="stylesheet" href="style.css?v=6">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=6">
-    <link rel="apple-touch-icon" href="icon-192.png?v=6">
+    <link rel="manifest" href="manifest.json?v=7">
+    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=7">
+    <link rel="apple-touch-icon" href="icon-192.png?v=7">
     <meta name="theme-color" content="#0e0e11">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -67,12 +67,22 @@
     <div class="view-metronomo" id="viewMetronomo">
 
     <div class="visualizer">
-        <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
+        <div class="visualizer-top-row">
+            <div class="measure-badge" id="currentMeasureBadge">Battuta 1</div>
+            <div class="viz-mode-toggle" role="tablist" aria-label="Vista suddivisioni">
+                <button type="button" id="vizDotsBtn" class="viz-mode-btn active" role="tab" aria-selected="true" title="Vista pallini" aria-label="Vista pallini">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><circle cx="5" cy="12" r="3"></circle><circle cx="12" cy="12" r="3"></circle><circle cx="19" cy="12" r="3"></circle></svg>
+                </button>
+                <button type="button" id="vizNotationBtn" class="viz-mode-btn" role="tab" aria-selected="false" title="Vista notazione musicale" aria-label="Vista notazione musicale">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="17" cy="16" r="3"></circle></svg>
+                </button>
+            </div>
+        </div>
         <div class="beat-dots" id="dotsContainer"></div>
         <div class="beat-movement-display" id="movementDisplay">
             MOVIMENTO <span class="highlight">1</span> DI 4
         </div>
-        <div class="dot-hint">
+        <div class="dot-hint" id="dotHint">
             Clicca sul pallino per: Normale (Grigio) &nbsp;→&nbsp; Accento (Arancione) &nbsp;→&nbsp; Muto (Rosso)<br>
             · Tieni premuto sul numero del beat per cambiare la suddivisione
         </div>
@@ -314,6 +324,6 @@
     </div>
 </div>
 
-<script src="script.js?v=6"></script>
+<script src="script.js?v=7"></script>
 </body>
 </html>
